@@ -4,7 +4,28 @@
     "href": "Proposal.html",
     "title": "Project Proposal",
     "section": "",
-    "text": "This project explores FinTech adoption and user engagement using the COFINFAD dataset, with the aim of generating data-driven insights into digital financial service usage. With the rapid growth of FinTech, digital financial services have become an increasingly important part of modern financial activity. However, adoption is unlikely to be uniform across all user groups, as differences in demographics, behavior, and engagement may shape how individuals interact with these services. In this context, the COFINFAD dataset provides a valuable opportunity to examine user characteristics, transaction patterns, product adoption, application usage, and customer satisfaction from a data-driven perspective. This project aims to better understand which groups are more likely to adopt FinTech services, what factors may be associated with adoption, and which users may remain less engaged. Ultimately, the project seeks to generate insights that can support broader FinTech adoption strategies, improve customer understanding, and contribute to financial inclusion."
+    "text": "This project explores FinTech adoption and user engagement using the COFINFAD dataset. As digital financial services become increasingly important, adoption may still vary across different user groups due to differences in demographics, behavior, and engagement. Using customer, transaction, product adoption, application usage, and satisfaction data, this project aims to identify who is more likely to adopt FinTech services and generate insights that support broader adoption and financial inclusion."
+  },
+  {
+    "objectID": "Proposal.html#overview-motivation",
+    "href": "Proposal.html#overview-motivation",
+    "title": "Project Proposal",
+    "section": "",
+    "text": "This project explores FinTech adoption and user engagement using the COFINFAD dataset. As digital financial services become increasingly important, adoption may still vary across different user groups due to differences in demographics, behavior, and engagement. Using customer, transaction, product adoption, application usage, and satisfaction data, this project aims to identify who is more likely to adopt FinTech services and generate insights that support broader adoption and financial inclusion."
+  },
+  {
+    "objectID": "Proposal.html#problem-statement",
+    "href": "Proposal.html#problem-statement",
+    "title": "Project Proposal",
+    "section": "2. Problem Statement",
+    "text": "2. Problem Statement\nAlthough FinTech has grown rapidly and become more integrated into everyday financial activity, user adoption and engagement are unlikely to be consistent across all customer groups. Differences in demographic background, financial behavior, product usage, and digital engagement may lead to distinct patterns in how customers interact with FinTech services. However, these patterns are often not immediately visible without systematic analysis.\nIn addition, customer activity may change over time, making it important to understand not only current usage behavior but also temporal trends and potential future developments. At the same time, customers may form meaningful segments with different levels of engagement, adoption, and satisfaction, while some observed differences across groups may require statistical validation rather than simple visual inspection.\nTherefore, there is a need for a data-driven analytical approach that can examine user behavior from multiple perspectives. This project addresses this gap by using the COFINFAD dataset to explore temporal patterns, identify customer segments, and validate key relationships and differences across user groups, with the aim of generating deeper insights into FinTech adoption and engagement."
+  },
+  {
+    "objectID": "Proposal.html#data",
+    "href": "Proposal.html#data",
+    "title": "Project Proposal",
+    "section": "3. Data",
+    "text": "3. Data\nThis project is based on the COFINFAD: Colombian Fintech Financial Analytics Dataset, obtained from the Mendeley Data repository. The dataset contains behavioral and transactional records from 48,723 customers of a Colombian fintech company and spans a 12-month observation period from 4 January 2023 to 29 December 2023. It includes a total of 3,159,157 transactions, providing a substantial empirical basis for analyzing customer behavior in digital financial services.\nThe dataset consists of 57 variables that capture a broad range of customer-related information, including demographics, transaction behavior, product adoption, customer satisfaction, Net Promoter Score (NPS), mobile application usage metrics, churn probability indicators, and geographic distribution across Colombian cities. Transaction amounts are expressed in Colombian Pesos (COP), while satisfaction measures are recorded on a 6-point scale."
   },
   {
     "objectID": "index.html",
@@ -12,19 +33,5 @@
     "title": "ISSS608 Group Project",
     "section": "",
     "text": "Welcome\nThis is our group project website."
-  },
-  {
-    "objectID": "Proposal.html#overview-motivation",
-    "href": "Proposal.html#overview-motivation",
-    "title": "Project Proposal",
-    "section": "",
-    "text": "This project explores FinTech adoption and user engagement using the COFINFAD dataset, with the aim of generating data-driven insights into digital financial service usage. With the rapid growth of FinTech, digital financial services have become an increasingly important part of modern financial activity. However, adoption is unlikely to be uniform across all user groups, as differences in demographics, behavior, and engagement may shape how individuals interact with these services. In this context, the COFINFAD dataset provides a valuable opportunity to examine user characteristics, transaction patterns, product adoption, application usage, and customer satisfaction from a data-driven perspective. This project aims to better understand which groups are more likely to adopt FinTech services, what factors may be associated with adoption, and which users may remain less engaged. Ultimately, the project seeks to generate insights that can support broader FinTech adoption strategies, improve customer understanding, and contribute to financial inclusion."
-  },
-  {
-    "objectID": "Proposal.html#problem-statement",
-    "href": "Proposal.html#problem-statement",
-    "title": "Project Proposal",
-    "section": "Problem Statement",
-    "text": "Problem Statement\nAlthough FinTech has grown rapidly and become more integrated into everyday financial activity, user adoption and engagement are unlikely to be consistent across all customer groups. Differences in demographic background, financial behavior, product usage, and digital engagement may lead to distinct patterns in how customers interact with FinTech services. However, these patterns are often not immediately visible without systematic analysis.\nIn addition, customer activity may change over time, making it important to understand not only current usage behavior but also temporal trends and potential future developments. At the same time, customers may form meaningful segments with different levels of engagement, adoption, and satisfaction, while some observed differences across groups may require statistical validation rather than simple visual inspection.\nTherefore, there is a need for a data-driven analytical approach that can examine user behavior from multiple perspectives. This project addresses this gap by using the COFINFAD dataset to explore temporal patterns, identify customer segments, and validate key relationships and differences across user groups, with the aim of generating deeper insights into FinTech adoption and engagement."
   }
 ]
