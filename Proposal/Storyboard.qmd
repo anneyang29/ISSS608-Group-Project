@@ -1,0 +1,48 @@
+---
+title: "Storyboard"
+format: html
+author: "Cherilyn, Chun-han, Erica"
+date: "15-03-2026"
+date-modified: "last-modified"
+number-sections: true
+---
+
+## Overview
+
+The proposed layout for the individual modules of the Shiny App are as follows:
+
+## Time-Oriented Data Analysis
+
+The following images demonstrate the planned layout for the module, which will consist of two main pages:
+
+1.  **Dashboard** - Explore the transaction behaviour of customers over time
+
+2.  **Cashflow analysis** - Explore past trends in net cashflow based on customer transactions and forecast future cashflow
+
+### Dashboard
+
+![Transaction Behaviour Over Time Dashboard - Showing cycle plot](images/dashboard_a.png){alt="Transaction Behaviour Over Time Dashboard - Showing cycle plot"}
+
+![Transaction Behaviour Over Time Dashboard - Showing STL Decomposition](images/dashboard_b.png){alt="Transaction Behaviour Over Time Dashboard - Showing STL Decomposition"}
+
+The dashboard will consist of 5 main sections.
+
+1.  General Filters - These will manipulate dataset that the figures and graphs are based on, allowing users to focus on specific subsections of data they are interested in such.
+
+2.  Key statistics - This will highlight some key statistics from the subset of data being analysed
+
+3.  Animated bubble chart - This will allow users to understand visualise how the distribution of customers according to the selected segmentation variable and the average transaction behaviour of customers within each segment has changed over time.
+
+4.  Cohort retention heatmap - This allows customers to visualise the percentage of returning customers making transactions from each monthly cohort of new customers.
+
+5.  Cycle Plot/STL Decomposition plot - These allow the users to explore possible seasonal/cyclical patterns in transaction behaviour
+
+### Cashflow Analysis
+
+![Net Cashflow Exploratory Data Analysis](images/forecast_a.png){alt="Net Cashflow Exploratory Data Analysis"}
+
+The first tab of the cashflow analysis consists of two graphs. The first graph plots the amounts of cash inflow/outflow based on the transaction data, and produces a color-coded shaded area representing net inflow or net outflow. The second graph breaks down inflow and outflow contributions by customer segment.
+
+![Forecasting](images/forecast_b.png){alt="Forecasting"}
+
+The second tab of the cashflow analysis provides a simple user interface for users to train and test various forecasting models to predict upcoming cashflow.
