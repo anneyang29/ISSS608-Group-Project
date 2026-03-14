@@ -7,8 +7,12 @@ website:
     left:
       - href: index.qmd
         text: Home
-      - href: Proposal.qmd
-        text: Proposal
+      - text: "Prototype"
+        menu:
+          - href: proposal.qmd
+            text: Proposal
+          - href: clustering.qmd
+            text: Clustering Analysis
 
 format:
   html:

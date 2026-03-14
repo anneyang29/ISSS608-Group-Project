@@ -22,5 +22,7 @@ This project is based on the [COFINFAD: Colombian Fintech Financial Analytics Da
 
 The dataset consists of 57 variables that capture a broad range of customer-related information, including demographics, transaction behavior, product adoption, customer satisfaction, Net Promoter Score (NPS), mobile application usage metrics, churn probability indicators, and geographic distribution across Colombian cities. Transaction amounts are expressed in Colombian Pesos (COP), while satisfaction measures are recorded on a 6-point scale.
 
+## 4. 
+
 
 
