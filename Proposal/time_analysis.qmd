@@ -58,7 +58,7 @@ The COFINFAD dataset covers 12 months of transaction data collected from over 48
 ### Customer data
 
 ```{r}
-customers <- read_csv('data/customer_data.csv')
+customers <- read_csv("data/customer_data.csv")
 ```
 
 ```{r}

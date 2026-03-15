@@ -70,7 +70,7 @@ Please refer to Storyboard page for more.
 The following R packages will be used in this project: The following R packages will be used:
 
 | R Package | Description |
-|--------------------|----------------------------------------------------|
+|----|----|
 | **tidyverse** | .Provides functions for data manipulation and visualisation |
 | **tsibble** | Provides a data infrastructure for tidy temporal data with wrangling tools |
 | **fable** | Provides modelling framework to estimate time series data using tsibble data |
