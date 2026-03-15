@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.7.33">
+<meta name="generator" content="quarto-1.8.26">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -34,14 +34,15 @@ ul.task-list li input[type="checkbox"] {
 <meta name="quarto:offset" content="../">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
 <script src="../site_libs/quarto-html/popper.min.js"></script>
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-ea385d0e468b0dd5ea5bf0780b1290d9.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-587c61ba64f3a5504c4d52d930310e48.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-bb49951d50c4a7e8d052f44ae1610a34.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-cc1d64809b8ed731f92ea1275fe9f05b.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -101,7 +102,7 @@ ul.task-list li input[type="checkbox"] {
     </a>
     <ul class="dropdown-menu" aria-labelledby="nav-menu-prototype">    
         <li>
-    <a class="dropdown-item" href="../proposal.qmd">
+    <a class="dropdown-item" href="../Proposal.html">
  <span class="dropdown-text">Proposal</span></a>
   </li>  
         <li>
@@ -139,6 +140,11 @@ ul.task-list li input[type="checkbox"] {
   <ul class="collapse">
   <li><a href="#dashboard" id="toc-dashboard" class="nav-link" data-scroll-target="#dashboard"><span class="header-section-number">2.1</span> Dashboard</a></li>
   <li><a href="#cashflow-analysis" id="toc-cashflow-analysis" class="nav-link" data-scroll-target="#cashflow-analysis"><span class="header-section-number">2.2</span> Cashflow Analysis</a></li>
+  </ul></li>
+  <li><a href="#clustering-and-customer-profiling-analysis" id="toc-clustering-and-customer-profiling-analysis" class="nav-link" data-scroll-target="#clustering-and-customer-profiling-analysis"><span class="header-section-number">3</span> Clustering and Customer Profiling Analysis</a>
+  <ul class="collapse">
+  <li><a href="#clustering-dashboard" id="toc-clustering-dashboard" class="nav-link" data-scroll-target="#clustering-dashboard"><span class="header-section-number">3.1</span> Clustering Dashboard</a></li>
+  <li><a href="#cluster-profiling" id="toc-cluster-profiling" class="nav-link" data-scroll-target="#cluster-profiling"><span class="header-section-number">3.2</span> Cluster Profiling</a></li>
   </ul></li>
   </ul>
 </nav>
@@ -233,6 +239,57 @@ ul.task-list li input[type="checkbox"] {
 </figure>
 </div>
 <p>The second tab of the cashflow analysis provides a simple user interface for users to train and test various forecasting models to predict upcoming cashflow.</p>
+</section>
+</section>
+<section id="clustering-and-customer-profiling-analysis" class="level2" data-number="3">
+<h2 data-number="3" class="anchored" data-anchor-id="clustering-and-customer-profiling-analysis"><span class="header-section-number">3</span> Clustering and Customer Profiling Analysis</h2>
+<p>The following images demonstrate the planned layout for the module, which is designed to help users identify meaningful customer segments based on transaction behaviour and customer characteristics.</p>
+<p>The module will consist of two main pages:</p>
+<ol type="1">
+<li><p><strong>Clustering Dashboard</strong> - Explore the clustering workflow, including variable screening, clustering method selection, cluster size assessment, and behavioural contrast across clusters</p></li>
+<li><p><strong>Cluster Profiling</strong> - Explore the demographic composition of the resulting clusters and support business interpretation of customer segments</p></li>
+</ol>
+<section id="clustering-dashboard" class="level3" data-number="3.1">
+<h3 data-number="3.1" class="anchored" data-anchor-id="clustering-dashboard"><span class="header-section-number">3.1</span> Clustering Dashboard</h3>
+<p>The dashboard will consist of 4 main sections.</p>
+<p><strong>Correlation Analysis</strong> - This allows users to examine the relationships between candidate clustering variables before segmentation is performed. A correlation matrix will be used to highlight highly correlated variables that may introduce redundancy into the clustering model. A warning message will also be shown when the absolute correlation between two variables exceeds a predefined threshold.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="images/cluster.png" class="img-fluid figure-img"></p>
+<figcaption>Clustering dashboard - correlation analysis view</figcaption>
+</figure>
+</div>
+<p><strong>Clustering Method Selection</strong> - This allows users to compare different clustering methods, such as K-means, PAM, and GMM. Evaluation plots such as the Elbow plot and the BetweenSS / TotalSS ratio plot will help users determine an appropriate number of clusters. Explanatory text will also be provided to guide users in interpreting the diagnostic plots.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="images/Clusteringdashboard.png" class="img-fluid figure-img"></p>
+<figcaption>Clustering dashboard - clustering method selection view</figcaption>
+</figure>
+</div>
+<p><strong>Cluster Size Distribution</strong> - This allows users to assess how customers are distributed across the selected clusters. The visualisation will show the proportion of customers in each cluster, helping users evaluate whether the segmentation result is balanced and practically interpretable.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="images/clustersize.png" class="img-fluid figure-img"></p>
+<figcaption>Clustering dashboard - cluster size distribution view</figcaption>
+</figure>
+</div>
+<p><strong>Behavioural Contrast</strong> - This allows users to compare clusters across selected behavioural variables. A parallel coordinate plot will be used to highlight differences in transaction frequency, transaction value, app engagement, product usage, and other clustering variables, so that users can better understand the behavioural patterns of each customer segment.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="images/behavioural-contrast.png" class="img-fluid figure-img"></p>
+<figcaption>Clustering dashboard - behavioural contrast view</figcaption>
+</figure>
+</div>
+</section>
+<section id="cluster-profiling" class="level3" data-number="3.2">
+<h3 data-number="3.2" class="anchored" data-anchor-id="cluster-profiling"><span class="header-section-number">3.2</span> Cluster Profiling</h3>
+<p><strong>Demographic Composition</strong> - This allows users to compare the demographic composition of each cluster using selected customer characteristics such as gender, age group, or occupation. A proportion-based chart will be used to show whether certain customer groups are more heavily represented in specific clusters, thereby supporting interpretation and customer profiling.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="images/demographic-composition.png" class="img-fluid figure-img"></p>
+<figcaption>Cluster profiling dashboard - demographic composition view</figcaption>
+</figure>
+</div>
 
 
 </section>
@@ -290,13 +347,14 @@ ul.task-list li input[type="checkbox"] {
       e.clearSelection();
     }
     const getTextToCopy = function(trigger) {
-        const codeEl = trigger.previousElementSibling.cloneNode(true);
-        for (const childEl of codeEl.children) {
-          if (isCodeAnnotation(childEl)) {
-            childEl.remove();
-          }
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
         }
-        return codeEl.innerText;
+      }
+      return codeEl.innerText;
     }
     const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
       text: getTextToCopy
