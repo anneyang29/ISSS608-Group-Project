@@ -41,7 +41,7 @@ The app will contain three main modules, each covering a different analytical ap
 
 1.  **Confirmatory Data Analysis**
     -   Hypothesis testing on behaviour-outcome relationships (for example, regression-based testing of whether selected behavioural predictors significantly explain customer value outcomes).
-    -   Group difference testing (for example, ANOVA or Kruskal-Wallis) to assess whether key metrics differ across customer segments.
+    -   Group difference testing (ANOVA) to assess whether key metrics differ across customer segments.
     -   Decision-focused reporting of effect size, significance, and practical business interpretation.
 
 <!-- -->
@@ -84,7 +84,7 @@ Please refer to Storyboard page for more.
 The following R packages will be used in this project: The following R packages will be used:
 
 | R Package | Description |
-|----------------------|-------------------------------------------------|
+|----|----|
 | **tidyverse** | .Provides functions for data manipulation and visualisation |
 | **tsibble** | Provides a data infrastructure for tidy temporal data with wrangling tools |
 | **fable** | Provides modelling framework to estimate time series data using tsibble data |
