@@ -13,7 +13,6 @@ website:
             text: Proposal
           - href: Proposal/clustering.qmd
             text: Clustering Analysis
-          - href: Proposal/time_analysis.qmd
           - href: Proposal/Storyboard.qmd
 
 format:
