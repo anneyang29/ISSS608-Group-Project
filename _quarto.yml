@@ -13,9 +13,11 @@ website:
             text: Proposal
           - href: clustering.qmd
             text: Clustering Analysis
+          - href: Proposal/time_analysis.qmd
+          - href: Proposal/Storyboard.qmd
 
 format:
   html:
-    theme: cosmo
+    theme: lux
     css: styles.css
     toc: true

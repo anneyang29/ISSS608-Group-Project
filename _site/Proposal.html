@@ -2,10 +2,12 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.8.26">
+<meta name="generator" content="quarto-1.7.33">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
+<meta name="author" content="Cherilyn, Chun-han, Erica">
+<meta name="dcterms.date" content="2027-03-03">
 
 <title>Project Proposal – ISSS608 Group Project</title>
 <style>
@@ -32,15 +34,14 @@ ul.task-list li input[type="checkbox"] {
 <meta name="quarto:offset" content="./">
 <script src="site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
-<script src="site_libs/quarto-html/axe/axe-check.js" type="module"></script>
 <script src="site_libs/quarto-html/popper.min.js"></script>
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="site_libs/quarto-html/anchor.min.js"></script>
 <link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-587c61ba64f3a5504c4d52d930310e48.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-ea385d0e468b0dd5ea5bf0780b1290d9.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-e31584831b205ffbb2d98406f31c2a5b.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-bb49951d50c4a7e8d052f44ae1610a34.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -100,12 +101,20 @@ ul.task-list li input[type="checkbox"] {
     </a>
     <ul class="dropdown-menu" aria-labelledby="nav-menu-prototype">    
         <li>
-    <a class="dropdown-item" href="./proposal.html">
+    <a class="dropdown-item" href="./proposal.qmd">
  <span class="dropdown-text">Proposal</span></a>
   </li>  
         <li>
     <a class="dropdown-item" href="./clustering.html">
  <span class="dropdown-text">Clustering Analysis</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./Proposal/time_analysis.html">
+ <span class="dropdown-text">Time-oriented Analysis of Transaction Behaviour</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./Proposal/Storyboard.html">
+ <span class="dropdown-text">Storyboard</span></a>
   </li>  
     </ul>
   </li>
@@ -125,10 +134,13 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#overview-motivation" id="toc-overview-motivation" class="nav-link active" data-scroll-target="#overview-motivation">1. Overview &amp; Motivation</a></li>
-  <li><a href="#problem-statement" id="toc-problem-statement" class="nav-link" data-scroll-target="#problem-statement">2. Problem Statement</a></li>
-  <li><a href="#data" id="toc-data" class="nav-link" data-scroll-target="#data">3. Data</a></li>
-  <li><a href="#section" id="toc-section" class="nav-link" data-scroll-target="#section">4.</a></li>
+  <li><a href="#overview-motivation" id="toc-overview-motivation" class="nav-link active" data-scroll-target="#overview-motivation"><span class="header-section-number">1</span> Overview &amp; Motivation</a></li>
+  <li><a href="#objectives" id="toc-objectives" class="nav-link" data-scroll-target="#objectives"><span class="header-section-number">2</span> Objectives</a></li>
+  <li><a href="#data" id="toc-data" class="nav-link" data-scroll-target="#data"><span class="header-section-number">3</span> Data</a></li>
+  <li><a href="#analytical-approach" id="toc-analytical-approach" class="nav-link" data-scroll-target="#analytical-approach"><span class="header-section-number">4</span> Analytical Approach</a></li>
+  <li><a href="#prototype" id="toc-prototype" class="nav-link" data-scroll-target="#prototype"><span class="header-section-number">5</span> Prototype</a></li>
+  <li><a href="#storyboard" id="toc-storyboard" class="nav-link" data-scroll-target="#storyboard"><span class="header-section-number">6</span> Storyboard</a></li>
+  <li><a href="#r-packages" id="toc-r-packages" class="nav-link" data-scroll-target="#r-packages"><span class="header-section-number">7</span> R Packages</a></li>
   </ul>
 </nav>
     </div>
@@ -144,8 +156,26 @@ ul.task-list li input[type="checkbox"] {
 
 <div class="quarto-title-meta">
 
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Cherilyn, Chun-han, Erica </p>
+          </div>
+  </div>
     
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">March 3, 2027</p>
+    </div>
+  </div>
   
+    <div>
+    <div class="quarto-title-meta-heading">Modified</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date-modified">March 15, 2026</p>
+    </div>
+  </div>
     
   </div>
   
@@ -154,23 +184,144 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
-<section id="overview-motivation" class="level2">
-<h2 class="anchored" data-anchor-id="overview-motivation">1. Overview &amp; Motivation</h2>
-<p>This project explores FinTech adoption and user engagement using the COFINFAD dataset. As digital financial services become increasingly important, adoption may still vary across different user groups due to differences in demographics, behavior, and engagement. Using customer, transaction, product adoption, application usage, and satisfaction data, this project aims to identify who is more likely to adopt FinTech services and generate insights that support broader adoption and financial inclusion.</p>
+<section id="overview-motivation" class="level2" data-number="1">
+<h2 data-number="1" class="anchored" data-anchor-id="overview-motivation"><span class="header-section-number">1</span> Overview &amp; Motivation</h2>
+<p>This project explores FinTech adoption and user engagement using the COFINFAD dataset. As digital financial services become increasingly ubiquitous, adoption and engagement rates may still vary across different user groups due to differences in demographic background, financial behavior, product usage, and digital literacy. However, these patterns are often not immediately visible within raw datasets, remaining inaccessible to decision-makers without systematic analysis.</p>
+<p>To bridge this gap, this project integrates the customer, transaction, product adoption, application usage, and satisfaction data, into a custom built Shiny web application. By combining data analytics and data visualisation techniques, the application aims to democratise financial insights, providing an intuitive, interactive environment for non-technical stakeholders to explore and utilise the data effectively.</p>
 </section>
-<section id="problem-statement" class="level2">
-<h2 class="anchored" data-anchor-id="problem-statement">2. Problem Statement</h2>
-<p>Although FinTech has grown rapidly and become more integrated into everyday financial activity, user adoption and engagement are unlikely to be consistent across all customer groups. Differences in demographic background, financial behavior, product usage, and digital engagement may lead to distinct patterns in how customers interact with FinTech services. However, these patterns are often not immediately visible without systematic analysis.</p>
-<p>In addition, customer activity may change over time, making it important to understand not only current usage behavior but also temporal trends and potential future developments. At the same time, customers may form meaningful segments with different levels of engagement, adoption, and satisfaction, while some observed differences across groups may require statistical validation rather than simple visual inspection.</p>
-<p>Therefore, there is a need for a data-driven analytical approach that can examine user behavior from multiple perspectives. This project addresses this gap by using the COFINFAD dataset to explore temporal patterns, identify customer segments, and validate key relationships and differences across user groups, with the aim of generating deeper insights into FinTech adoption and engagement.</p>
+<section id="objectives" class="level2" data-number="2">
+<h2 data-number="2" class="anchored" data-anchor-id="objectives"><span class="header-section-number">2</span> Objectives</h2>
+<p>The key objectives of this project are to:</p>
+<ol type="1">
+<li><p>Examine the COFINFAD dataset to derive useful insights to better understand the fintech company’s customer base in the following dimensions:</p>
+<ol type="1">
+<li><p>xx <em>(<strong>confirmatory data analysis)</strong></em></p></li>
+<li><p>Identifying natural segments in the customer base using factors such as <strong>XX</strong>, to inform downstream decision making on resource optimisation and precision marketing towards different customer segments</p></li>
+<li><p>Monitor business performance and KPIs with an interactive dashboard to identify temporal trends in the data</p></li>
+<li><p>Forecast future cashflow needs of the company to support user transactions based on historical trends.</p></li>
+</ol></li>
+<li><p>Combine the above insights into a interactive and intuitive to use visual analytics application</p></li>
+</ol>
 </section>
-<section id="data" class="level2">
-<h2 class="anchored" data-anchor-id="data">3. Data</h2>
+<section id="data" class="level2" data-number="3">
+<h2 data-number="3" class="anchored" data-anchor-id="data"><span class="header-section-number">3</span> Data</h2>
 <p>This project is based on the <a href="https://data.mendeley.com/datasets/mhb4zn3258/1">COFINFAD: Colombian Fintech Financial Analytics Dataset</a>, obtained from the Mendeley Data repository. The dataset contains behavioral and transactional records from 48,723 customers of a Colombian fintech company and spans a 12-month observation period from 4 January 2023 to 29 December 2023. It includes a total of 3,159,157 transactions, providing a substantial empirical basis for analyzing customer behavior in digital financial services.</p>
 <p>The dataset consists of 57 variables that capture a broad range of customer-related information, including demographics, transaction behavior, product adoption, customer satisfaction, Net Promoter Score (NPS), mobile application usage metrics, churn probability indicators, and geographic distribution across Colombian cities. Transaction amounts are expressed in Colombian Pesos (COP), while satisfaction measures are recorded on a 6-point scale.</p>
 </section>
-<section id="section" class="level2">
-<h2 class="anchored" data-anchor-id="section">4.</h2>
+<section id="analytical-approach" class="level2" data-number="4">
+<h2 data-number="4" class="anchored" data-anchor-id="analytical-approach"><span class="header-section-number">4</span> Analytical Approach</h2>
+<p>The app will contain three main modules, each covering a different analytical approach to uncover useful business insights from the customer and transaction behaviour data.</p>
+<ol type="1">
+<li><strong>Confirmatory Data Analysis</strong></li>
+<li><strong>Clustering Analysis</strong></li>
+<li><strong>Time-oriented Data Analysis</strong>
+<ul>
+<li>Dashboard monitoring transaction behaviour of customers over time
+<ul>
+<li>EDA - Animated bubble chart tracking average transaction behaviour over time</li>
+<li>Cohort retention analysis</li>
+<li>Seasonal trend analysis with cycle plots/STL decomposition</li>
+</ul></li>
+<li>Cashflow analysis
+<ul>
+<li>Historical net cashflow visualisation with area chart</li>
+<li>Composition analysis of how different customer segments contribute to net cashflow</li>
+<li>Forecasting future cashflow</li>
+</ul></li>
+</ul></li>
+</ol>
+</section>
+<section id="prototype" class="level2" data-number="5">
+<h2 data-number="5" class="anchored" data-anchor-id="prototype"><span class="header-section-number">5</span> Prototype</h2>
+<p>The main prototype modules will be split as follows:</p>
+<ul>
+<li>Confirmatory Data Analysis</li>
+<li>Clustering Analysis</li>
+<li>Time-oriented Data Analysis</li>
+</ul>
+<p>Please refer to the respective prototype tabs for details on the R codes to create the outputs for each module.</p>
+</section>
+<section id="storyboard" class="level2" data-number="6">
+<h2 data-number="6" class="anchored" data-anchor-id="storyboard"><span class="header-section-number">6</span> Storyboard</h2>
+<p>Please refer to Storyboard page for more.</p>
+</section>
+<section id="r-packages" class="level2" data-number="7">
+<h2 data-number="7" class="anchored" data-anchor-id="r-packages"><span class="header-section-number">7</span> R Packages</h2>
+<p>The following R packages will be used in this project: The following R packages will be used:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 27%">
+<col style="width: 72%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>R Package</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>tidyverse</strong></td>
+<td>.Provides functions for data manipulation and visualisation</td>
+</tr>
+<tr class="even">
+<td><strong>tsibble</strong></td>
+<td>Provides a data infrastructure for tidy temporal data with wrangling tools</td>
+</tr>
+<tr class="odd">
+<td><strong>fable</strong></td>
+<td>Provides modelling framework to estimate time series data using tsibble data</td>
+</tr>
+<tr class="even">
+<td><strong>feasts</strong></td>
+<td>Provides functions for generating cycle plots and decomposing time series data</td>
+</tr>
+<tr class="odd">
+<td><strong>lubridate</strong></td>
+<td>Provides functions to parse and manipulate dates and datetimes</td>
+</tr>
+<tr class="even">
+<td><strong>tidymodels</strong></td>
+<td>Provides functions for modeling and machine learning in r</td>
+</tr>
+<tr class="odd">
+<td><strong>timetk</strong></td>
+<td>Provides functions for visualising and analysing time-series data.</td>
+</tr>
+<tr class="even">
+<td><strong>modeltime</strong></td>
+<td>extension to tidymodels which provides a unified framework for time series forecasting</td>
+</tr>
+<tr class="odd">
+<td><strong>rlang</strong></td>
+<td>provides functions to work with base types and core R features</td>
+</tr>
+<tr class="even">
+<td><strong>cluster</strong></td>
+<td>Clustering evaluation utilities (e.g., silhouette).</td>
+</tr>
+<tr class="odd">
+<td><strong>factoextra</strong></td>
+<td>Helper functions for visualising clusters and PCA results .</td>
+</tr>
+<tr class="even">
+<td><strong>DT</strong></td>
+<td>Interactive tables for cluster profile summaries in Shiny.</td>
+</tr>
+<tr class="odd">
+<td><strong>shiny</strong></td>
+<td>UI and server framework for integrating this module into the final Shiny app.</td>
+</tr>
+<tr class="even">
+<td><strong>plotly</strong></td>
+<td>Interactive plotting for cluster maps and exploratory visuals.</td>
+</tr>
+<tr class="odd">
+<td><strong>e1071</strong></td>
+<td>Skewness computation.</td>
+</tr>
+</tbody>
+</table>
 
 
 </section>
@@ -227,14 +378,13 @@ ul.task-list li input[type="checkbox"] {
       e.clearSelection();
     }
     const getTextToCopy = function(trigger) {
-      const outerScaffold = trigger.parentElement.cloneNode(true);
-      const codeEl = outerScaffold.querySelector('code');
-      for (const childEl of codeEl.children) {
-        if (isCodeAnnotation(childEl)) {
-          childEl.remove();
+        const codeEl = trigger.previousElementSibling.cloneNode(true);
+        for (const childEl of codeEl.children) {
+          if (isCodeAnnotation(childEl)) {
+            childEl.remove();
+          }
         }
-      }
-      return codeEl.innerText;
+        return codeEl.innerText;
     }
     const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
       text: getTextToCopy
