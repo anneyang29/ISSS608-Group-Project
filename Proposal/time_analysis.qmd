@@ -20,27 +20,18 @@ The following page presents the time-oriented data analysis of the Colombian Fin
 
 The following R packages will be used:
 
-+------------+----------------------------------------------------------------------------------------+-----------+
-| tidyverse  | .Provides functions for data manipulation and visualisation                            | yes       |
-+------------+----------------------------------------------------------------------------------------+-----------+
-| knitr      | Provides functions for publisher-quality static tables                                 | no        |
-+------------+----------------------------------------------------------------------------------------+-----------+
-| tsibble    | Provides a data infrastructure for tidy temporal data with wrangling tools             | yes       |
-+------------+----------------------------------------------------------------------------------------+-----------+
-| fable      | Provides modelling framework to estimate time series data using tsibble data           | yes       |
-+------------+----------------------------------------------------------------------------------------+-----------+
-| feasts     | Provides functions for generating cycle plots and decomposing time series data         | yes       |
-+------------+----------------------------------------------------------------------------------------+-----------+
-| lubridate  | Provides functions to parse and manipulate dates and datetimes                         | yes       |
-+------------+----------------------------------------------------------------------------------------+-----------+
-| tidymodels | Provides functions for modeling and machine learning in r                              | yes       |
-+------------+----------------------------------------------------------------------------------------+-----------+
-| timetk     | Provides functions for visualising and analysing time-series data.                     | yes       |
-+------------+----------------------------------------------------------------------------------------+-----------+
-| modeltime  | extension to tidymodels which provides a unified framework for time series forecasting | yes       |
-+------------+----------------------------------------------------------------------------------------+-----------+
-| rlang      | provides functions to work with base types and core R features                         | yes       |
-+------------+----------------------------------------------------------------------------------------+-----------+
+|  |  |  |
+|----|----|----|
+| tidyverse | .Provides functions for data manipulation and visualisation | yes |
+| knitr | Provides functions for publisher-quality static tables | no |
+| tsibble | Provides a data infrastructure for tidy temporal data with wrangling tools | yes |
+| fable | Provides modelling framework to estimate time series data using tsibble data | yes |
+| feasts | Provides functions for generating cycle plots and decomposing time series data | yes |
+| lubridate | Provides functions to parse and manipulate dates and datetimes | yes |
+| tidymodels | Provides functions for modeling and machine learning in r | yes |
+| timetk | Provides functions for visualising and analysing time-series data. | yes |
+| modeltime | extension to tidymodels which provides a unified framework for time series forecasting | yes |
+| rlang | provides functions to work with base types and core R features | yes |
 
 The following code chunk imports and loads the necessary packages for this exercise
 
@@ -58,7 +49,7 @@ The COFINFAD dataset covers 12 months of transaction data collected from over 48
 ### Customer data
 
 ```{r}
-customers <- read_csv('data/customer_data.csv')
+customers <- read_csv("data/customer_data.csv")
 ```
 
 ```{r}
@@ -595,13 +586,13 @@ The final section of the dashboard will explore finding seasonal trends in the t
 
 ### Filter
 
-+----------+-------------------+------------------------+----------------------------------------------------------------------------------------------+
-| Filter   | Shiny widget type | Values                 | Function                                                                                     |
-+==========+===================+========================+==============================================================================================+
-| Metric   | radioButtons()    | -   Transaction Amount | Allow users to select what sort of transaction behaviour from customers they want to analyse |
-|          |                   | -   Transaction Count  |                                                                                              |
-|          |                   | -   User Count         |                                                                                              |
-+----------+-------------------+------------------------+----------------------------------------------------------------------------------------------+
++--------+-------------------+------------------------+----------------------------------------------------------------------------------------------+
+| Filter | Shiny widget type | Values                 | Function                                                                                     |
++========+===================+========================+==============================================================================================+
+| Metric | radioButtons()    | -   Transaction Amount | Allow users to select what sort of transaction behaviour from customers they want to analyse |
+|        |                   | -   Transaction Count  |                                                                                              |
+|        |                   | -   User Count         |                                                                                              |
++--------+-------------------+------------------------+----------------------------------------------------------------------------------------------+
 
 The following code chunk will take in the following variables as inputs to prepare the data.
 
