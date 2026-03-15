@@ -9,7 +9,7 @@ website:
         text: Home
       - text: "Prototype"
         menu:
-          - href: proposal.qmd
+          - href: Proposal/proposal.qmd
             text: Proposal
           - href: clustering.qmd
             text: Clustering Analysis
