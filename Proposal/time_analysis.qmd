@@ -1144,6 +1144,8 @@ These filters will be incorporated into the steps as relevant in the code chunks
 The following code chunk creates a function to allow users to decide the training/test data split (splitValue). Using `initial_time_split()` from **rsample** package, we will split the data into the training and hold-out data sets.
 
 ```{r}
+library(rsample)
+
 set.seed(1234)
 
 get_splits <- function(data, splitValue){
@@ -1161,6 +1163,13 @@ splits <- get_splits(liquidity, 0.95)
 Next, the models will be built and fitted on the training data.
 
 ```{r}
+library(prodlim)
+library(modeltime)
+library(parsnip)
+library(rsample)
+library(generics)
+library(earth)
+
   model_fit_ets <- exp_smoothing() %>%
     set_engine(engine = "ets") %>%
     fit(net_liquidity ~ as.Date(`date`), 
