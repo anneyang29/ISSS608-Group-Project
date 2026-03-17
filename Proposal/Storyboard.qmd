@@ -82,3 +82,43 @@ The dashboard will consist of 4 main sections.
 **Demographic Composition** - This allows users to compare the demographic composition of each cluster using selected customer characteristics such as gender, age group, or occupation. A proportion-based chart will be used to show whether certain customer groups are more heavily represented in specific clusters, thereby supporting interpretation and customer profiling.
 
 ![Cluster profiling dashboard - demographic composition view](images/demographic-composition.png)
+
+## Confirmatory Analysis Dashboard
+
+The following images demonstrate the planned layout for the confirmatory analysis module, which will consist of two hypothesis-testing pages:
+
+1.  **H1: Linear Regression (Behavior -> Customer Value)** - Test whether a selected predictor has a statistically significant linear relationship with the selected customer value outcome.
+
+2.  **H2: One-way ANOVA (Spending by Segment)** - Test whether mean spending differs significantly across selected customer groups.
+
+### H1: Regression (Behavior -> Customer Value)
+
+![H1 confirmatory dashboard - linear regression view](images/Confirmatory_H1.png){alt="H1 confirmatory dashboard - linear regression view"}
+
+This page includes:
+
+1.  **Outcome selector** for the dependent variable.
+
+2.  **Predictor selector** for the independent variable.
+
+3.  **Model summary cards** showing slope, p-value, R-squared, and final hypothesis decision.
+
+4.  **Regression scatter plot with fitted line** to support interpretation of direction and strength.
+
+The intended decision logic is to reject or not reject H1 based on the selected significance threshold and model p-value.
+
+### H2: Group Difference (Spending by Segment)
+
+![H2 confirmatory dashboard - one-way ANOVA view](images/Confirmatory_H2.png){alt="H2 confirmatory dashboard - one-way ANOVA view"}
+
+This page includes:
+
+1.  **Group selector** to define the segmentation variable.
+
+2.  **Metric selector** to define the response variable for comparison.
+
+3.  **ANOVA summary cards** showing test statistic, p-value, and final hypothesis decision.
+
+4.  **Group distribution plot** (boxplot with outliers) to visually compare spread and central tendency across segments.
+
+The intended decision logic is to reject or not reject H2 based on the selected significance threshold and ANOVA p-value.
