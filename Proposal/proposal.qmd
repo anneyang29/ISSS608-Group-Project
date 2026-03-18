@@ -21,7 +21,7 @@ The key objectives of this project are to:
 
     1.  Test hypothesis-driven relationships between customer behaviour and business outcomes (for example, whether behavioural indicators significantly predict customer value outcomes, and whether spending differs significantly across customer groups) using confirmatory data analysis.
 
-    2.  Identifying natural segments in the customer base using factors such as **XX**, to inform downstream decision making on resource optimisation and precision marketing towards different customer segments
+    2.  Identifying natural segments in the customer base, to inform downstream decision making on resource optimisation and precision marketing towards different customer segments
 
     3.  Monitor business performance and KPIs with an interactive dashboard to identify temporal trends in the data
 
@@ -41,11 +41,10 @@ The app will contain three main modules, each covering a different analytical ap
 
 1.  **Confirmatory Data Analysis**
     -   Hypothesis testing on behaviour-outcome relationships (for example, regression-based testing of whether selected behavioural predictors significantly explain customer value outcomes).
+
     -   Group difference testing (for example, ANOVA or Kruskal-Wallis) to assess whether key metrics differ across customer segments.
-    -   Decision-focused reporting of effect size, significance, and practical business interpretation.
 
-<!-- -->
-
+    -   Decision-focused reporting of effect size, significance, and practical business interpretation.\
 2.  **Clustering Analysis**
     -   Dashboard supporting customer segmentation analysis
         -   Correlation analysis to screen candidate clustering variables
@@ -54,7 +53,7 @@ The app will contain three main modules, each covering a different analytical ap
         -   Behavioural contrast across clusters using parallel coordinate plots
     -   Cluster profiling
         -   Demographic composition analysis of each cluster
-        -   Interpretation of customer segments based on behavioural and demographic characteristics
+        -   Interpretation of customer segments based on behavioural and demographic characteristics\
 3.  **Time-oriented Data Analysis**
     -   Dashboard monitoring transaction behaviour of customers over time
         -   EDA - Animated bubble chart tracking average transaction behaviour over time
@@ -70,21 +69,21 @@ The app will contain three main modules, each covering a different analytical ap
 The main prototype modules will be split as follows:
 
 -   Confirmatory Data Analysis
--   Clustering Analysis
--   Time-oriented Data Analysis
+-   [Clustering Analysis](https://anneyang29.github.io/ISSS608-Group-Project/clustering.html)
+-   [Time-oriented Data Analysis](https://anneyang29.github.io/ISSS608-Group-Project/Proposal/time_analysis.html)
 
 Please refer to the respective prototype tabs for details on the R codes to create the outputs for each module.
 
 ## Storyboard
 
-Please refer to Storyboard page for more.
+Please refer to [Storyboard page](https://anneyang29.github.io/ISSS608-Group-Project/Proposal/Storyboard.html) for details on the planned layouts and types of plots expected for each module.
 
 ## R Packages
 
 The following R packages will be used in this project:
 
 | R Package | Description |
-|-----------------------|-------------------------------------------------|
+|-------------------------|------------------------------------------------|
 | **tidyverse** | Provides functions for data manipulation and visualisation |
 | **tsibble** | Provides a data infrastructure for tidy temporal data with wrangling tools |
 | **fable** | Provides modelling framework to estimate time series data using tsibble data |
@@ -100,3 +99,7 @@ The following R packages will be used in this project:
 | **shiny** | UI and server framework for integrating this module into the final Shiny app. |
 | **plotly** | Interactive plotting for cluster maps and exploratory visuals. |
 | **e1071** | Skewness computation. |
+
+## Scope of Work
+
+![Gantt chart overview of project tasks and task owners](images/gantt_chart.jpg)
