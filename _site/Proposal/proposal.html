@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.8.26">
+<meta name="generator" content="quarto-1.8.25">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -39,10 +39,10 @@ ul.task-list li input[type="checkbox"] {
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-587c61ba64f3a5504c4d52d930310e48.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-7b89279ff1a6dce999919e0e67d4d9ec.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-cc1d64809b8ed731f92ea1275fe9f05b.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-26827f95213357c060b998e0666f8ebe.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -82,6 +82,8 @@ ul.task-list li input[type="checkbox"] {
     <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
+    <a href="../index.html" class="navbar-brand navbar-brand-logo">
+    </a>
     <a class="navbar-brand" href="../index.html">
     <span class="navbar-title">ISSS608 Group Project</span>
     </a>
@@ -174,7 +176,7 @@ ul.task-list li input[type="checkbox"] {
     <div>
     <div class="quarto-title-meta-heading">Modified</div>
     <div class="quarto-title-meta-contents">
-      <p class="date-modified">March 15, 2026</p>
+      <p class="date-modified">March 18, 2026</p>
     </div>
   </div>
     
@@ -196,12 +198,12 @@ ul.task-list li input[type="checkbox"] {
 <ol type="1">
 <li><p>Examine the COFINFAD dataset to derive useful insights to better understand the fintech company’s customer base in the following dimensions:</p>
 <ol type="1">
-<li><p>xx <em>(<strong>confirmatory data analysis)</strong></em></p></li>
+<li><p>Test hypothesis-driven relationships between customer behaviour and business outcomes (for example, whether behavioural indicators significantly predict customer value outcomes, and whether spending differs significantly across customer groups) using confirmatory data analysis.</p></li>
 <li><p>Identifying natural segments in the customer base using factors such as <strong>XX</strong>, to inform downstream decision making on resource optimisation and precision marketing towards different customer segments</p></li>
 <li><p>Monitor business performance and KPIs with an interactive dashboard to identify temporal trends in the data</p></li>
 <li><p>Forecast future cashflow needs of the company to support user transactions based on historical trends.</p></li>
 </ol></li>
-<li><p>Combine the above insights into a interactive and intuitive to use visual analytics application</p></li>
+<li><p>Combine the above insights into an interactive and intuitive to use visual analytics application</p></li>
 </ol>
 </section>
 <section id="data" class="level2" data-number="3">
@@ -213,7 +215,15 @@ ul.task-list li input[type="checkbox"] {
 <h2 data-number="4" class="anchored" data-anchor-id="analytical-approach"><span class="header-section-number">4</span> Analytical Approach</h2>
 <p>The app will contain three main modules, each covering a different analytical approach to uncover useful business insights from the customer and transaction behaviour data.</p>
 <ol type="1">
-<li><strong>Confirmatory Data Analysis</strong></li>
+<li><strong>Confirmatory Data Analysis</strong>
+<ul>
+<li>Hypothesis testing on behaviour-outcome relationships (for example, regression-based testing of whether selected behavioural predictors significantly explain customer value outcomes).</li>
+<li>Group difference testing (for example, ANOVA or Kruskal-Wallis) to assess whether key metrics differ across customer segments.</li>
+<li>Decision-focused reporting of effect size, significance, and practical business interpretation.</li>
+</ul></li>
+</ol>
+<!-- -->
+<ol start="2" type="1">
 <li><strong>Clustering Analysis</strong>
 <ul>
 <li>Dashboard supporting customer segmentation analysis
@@ -262,11 +272,11 @@ ul.task-list li input[type="checkbox"] {
 </section>
 <section id="r-packages" class="level2" data-number="7">
 <h2 data-number="7" class="anchored" data-anchor-id="r-packages"><span class="header-section-number">7</span> R Packages</h2>
-<p>The following R packages will be used in this project: The following R packages will be used:</p>
+<p>The following R packages will be used in this project:</p>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 27%">
-<col style="width: 72%">
+<col style="width: 33%">
+<col style="width: 66%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -277,7 +287,7 @@ ul.task-list li input[type="checkbox"] {
 <tbody>
 <tr class="odd">
 <td><strong>tidyverse</strong></td>
-<td>.Provides functions for data manipulation and visualisation</td>
+<td>Provides functions for data manipulation and visualisation</td>
 </tr>
 <tr class="even">
 <td><strong>tsibble</strong></td>
@@ -334,6 +344,10 @@ ul.task-list li input[type="checkbox"] {
 <tr class="odd">
 <td><strong>e1071</strong></td>
 <td>Skewness computation.</td>
+</tr>
+<tr class="even">
+<td><strong>broom</strong></td>
+<td>Converts statistical model outputs into tidy tibbles for easier analysis and reporting.</td>
 </tr>
 </tbody>
 </table>

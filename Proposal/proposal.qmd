@@ -41,9 +41,7 @@ The app will contain three main modules, each covering a different analytical ap
 
 1.  **Confirmatory Data Analysis**
     -   Hypothesis testing on behaviour-outcome relationships (for example, regression-based testing of whether selected behavioural predictors significantly explain customer value outcomes).
-
-    -   Group difference testing (for example, ANOVA or Kruskal-Wallis) to assess whether key metrics differ across customer segments.
-
+    -   Group difference testing (ANOVA) to assess whether key metrics differ across customer segments.
     -   Decision-focused reporting of effect size, significance, and practical business interpretation.\
 2.  **Clustering Analysis**
     -   Dashboard supporting customer segmentation analysis
@@ -68,7 +66,7 @@ The app will contain three main modules, each covering a different analytical ap
 
 The main prototype modules will be split as follows:
 
--   Confirmatory Data Analysis
+-   [Confirmatory Data Analysis](https://anneyang29.github.io/ISSS608-Group-Project/Proposal/Confirmatory.html)
 -   [Clustering Analysis](https://anneyang29.github.io/ISSS608-Group-Project/clustering.html)
 -   [Time-oriented Data Analysis](https://anneyang29.github.io/ISSS608-Group-Project/Proposal/time_analysis.html)
 
@@ -83,7 +81,7 @@ Please refer to [Storyboard page](https://anneyang29.github.io/ISSS608-Group-Pro
 The following R packages will be used in this project:
 
 | R Package | Description |
-|-------------------------|------------------------------------------------|
+|-------------------------|-----------------------------------------------|
 | **tidyverse** | Provides functions for data manipulation and visualisation |
 | **tsibble** | Provides a data infrastructure for tidy temporal data with wrangling tools |
 | **fable** | Provides modelling framework to estimate time series data using tsibble data |

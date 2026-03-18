@@ -15,6 +15,7 @@ website:
           - href: Proposal/Storyboard.qmd
           - href: clustering.qmd
             text: Clustering Analysis
+          - href: Proposal/Confirmatory.qmd
           - href: Proposal/time_analysis.qmd
           
 
