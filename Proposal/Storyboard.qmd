@@ -87,11 +87,11 @@ The dashboard will consist of 4 main sections.
 
 The following images demonstrate the planned layout for the confirmatory analysis module, which will consist of two hypothesis-testing pages:
 
-1.  **H1: Linear Regression (Behavior -> Customer Value)** - Test whether a selected predictor has a statistically significant linear relationship with the selected customer value outcome.
+1.  **H1: Linear Regression (Behaviour -> Customer Value)** - Test whether a selected predictor has a statistically significant linear relationship with the selected customer value outcome.
 
 2.  **H2: One-way ANOVA (Spending by Segment)** - Test whether mean spending differs significantly across selected customer groups.
 
-### H1: Regression (Behavior -> Customer Value)
+### H1: Regression (Behaviour -> Customer Value)
 
 ![H1 confirmatory dashboard - linear regression view](images/Confirmatory_H1.png){alt="H1 confirmatory dashboard - linear regression view"}
 
