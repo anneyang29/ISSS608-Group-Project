@@ -11,7 +11,7 @@ execute:
 
 ## Overview
 
-The following page presents the time-oriented data analysis of the Colombian Fintech Financial Analytics (COFINFAD) dataset. The key objectives of the analysis are:
+The following page presents the time-oriented data analysis of the Colombian Fintech Financial Analytics (COFINFAD) dataset. The key objectives of the analysis are: 
 
 1.  **Business KPI monitoring** - Facilitate exploration and monitoring of transaction behaviour to uncover temporal trends and understand monthly performance.
 2.  **Cashflow Analysis** - Identify historical trends in cashflow needs from transaction operations, explore customer segments contribution to overall inflows and outflows of cash, and forecast future cashflow.
