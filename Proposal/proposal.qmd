@@ -27,7 +27,7 @@ The key objectives of this project are to:
 
     4.  Forecast future cashflow needs of the company to support user transactions based on historical trends.
 
-2.  Combine the above insights into a interactive and intuitive to use visual analytics application
+2.  Combine the above insights into an interactive and intuitive to use visual analytics application
 
 ## Data
 
@@ -81,11 +81,11 @@ Please refer to Storyboard page for more.
 
 ## R Packages
 
-The following R packages will be used in this project: The following R packages will be used:
+The following R packages will be used in this project:
 
 | R Package | Description |
-|----------------------|-------------------------------------------------|
-| **tidyverse** | .Provides functions for data manipulation and visualisation |
+|-----------------------|-------------------------------------------------|
+| **tidyverse** | Provides functions for data manipulation and visualisation |
 | **tsibble** | Provides a data infrastructure for tidy temporal data with wrangling tools |
 | **fable** | Provides modelling framework to estimate time series data using tsibble data |
 | **feasts** | Provides functions for generating cycle plots and decomposing time series data |
