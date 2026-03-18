@@ -16,7 +16,9 @@ website:
           - href: clustering.qmd
             text: Clustering Analysis
           - href: Proposal/Confirmatory.qmd
+            text: Confirmatory Analysis 
           - href: Proposal/time_analysis.qmd
+            text: Time Analysis
           
 
 format:
