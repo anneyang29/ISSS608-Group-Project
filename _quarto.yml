@@ -13,7 +13,7 @@ website:
           - href: Proposal/proposal.qmd
             text: Proposal
           - href: Proposal/Storyboard.qmd
-          - href: clustering.qmd
+          - href: Proposal/clustering.qmd
             text: Clustering Analysis
           - href: Proposal/Confirmatory.qmd
             text: Confirmatory Analysis 
