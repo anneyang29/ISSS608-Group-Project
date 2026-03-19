@@ -1498,3 +1498,16 @@ ggplot(customers_clustered,
   ) +
   theme_minimal()
 ```
+
+## 9. Export Data for Shiny App
+
+To facilitate the interactive Shiny application, we consolidate the cluster assignments from all three methods (K-means, CLARA, GMM) along with the preprocessed variables (`df_model`) and export them as a single dataset.
+
+```{r}
+shiny_base_data <- customers %>%
+  dplyr::select(customer_id, gender, income_bracket, education_level, marital_status, investment_account, insurance_product) %>%
+  dplyr::left_join(df_model, by = "customer_id")
+
+readr::write_rds(shiny_base_data, "data/shiny_base_data.rds")
+``` 
+
