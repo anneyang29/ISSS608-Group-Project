@@ -10,7 +10,7 @@ pacman::p_load(shiny, shinydashboard, shinycssloaders,
 
 #Import data 
 #====================================================
-base_data <- readRDS("../Proposal/data/shiny_base_data.rds")
+base_data <- readRDS("data/shiny_base_data.rds")
 
 # Global Variables
 cluster_vars <- c("monthly_transaction_count", "average_transaction_value", 

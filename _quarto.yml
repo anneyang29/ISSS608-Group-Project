@@ -8,6 +8,11 @@ website:
     left:
       - href: index.qmd
         text: Home
+        
+      - text: "Shiny" 
+        href: "https://chunhanyang.shinyapps.io/colombian-fintech-dashboard/"
+        target: _blank
+        
       - text: "Prototype"
         menu:
           - href: Proposal/proposal.qmd
