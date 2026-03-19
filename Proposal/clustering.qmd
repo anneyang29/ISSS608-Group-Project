@@ -1505,7 +1505,7 @@ To facilitate the interactive Shiny application, we consolidate the cluster assi
 
 ```{r}
 shiny_base_data <- customers %>%
-  dplyr::select(customer_id, gender, income_bracket, education_level, marital_status, investment_account, insurance_product) %>%
+  dplyr::select(customer_id, gender, income_bracket, education_level, marital_status, investment_account, insurance_product,acquisition_channel, customer_segment, savings_account,credit_card, personal_loan, bill_payment_user, auto_savings_enabled) %>%
   dplyr::left_join(df_model, by = "customer_id")
 
 readr::write_rds(shiny_base_data, "data/shiny_base_data.rds")
