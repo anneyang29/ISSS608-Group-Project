@@ -10,102 +10,136 @@ pacman::p_load(shiny, shinydashboard, shinycssloaders,
                feasts, tidymodels, timetk, 
                modeltime, rlang, plotly, data.table, lubridate)
 
-#Import data 
-#====================================================
 find_existing_path <- function(paths) {
   existing <- paths[file.exists(paths)]
-  if (length(existing) > 0) normalizePath(existing[1], winslash = "/", mustWork = TRUE) else NA_character_
+  if (length(existing) > 0) {
+    normalizePath(existing[1], winslash = "/", mustWork = TRUE)
+  } else {
+    NA_character_
+  }
 }
 
-rds_candidates <- c(
-  file.path("RShiny", "data", "shiny_base_data.rds"),
-  file.path("data", "shiny_base_data.rds"),
-  file.path("..", "RShiny", "data", "shiny_base_data.rds"),
-  file.path("..", "data", "shiny_base_data.rds")
+base_rds_candidates <- c(
+  file.path("RShiny", "data", "shiny_base_data_light.rds"),
+  file.path("data", "shiny_base_data_light.rds"),
+  file.path("..", "RShiny", "data", "shiny_base_data_light.rds"),
+  file.path("..", "data", "shiny_base_data_light.rds")
 )
 
-base_data_path <- find_existing_path(rds_candidates)
+time_rds_candidates <- c(
+  file.path("RShiny", "data", "shiny_time_data.rds"),
+  file.path("data", "shiny_time_data.rds"),
+  file.path("..", "RShiny", "data", "shiny_time_data.rds"),
+  file.path("..", "data", "shiny_time_data.rds")
+)
+
+base_data_path <- find_existing_path(base_rds_candidates)
+time_data_path <- find_existing_path(time_rds_candidates)
+
+if (!is.na(base_data_path)) {
+  message("Loading light base RDS from: ", base_data_path)
+  
+  data_bundle <- readRDS(base_data_path)
+  base_data <- data_bundle$base_data
+  
+  # do NOT load time_data at app startup
+  time_data <- NULL
+  
+} else {
+  stop(
+    "shiny_base_data_light.rds not found. Please deploy the prebuilt light RDS file with the app.",
+    call. = FALSE
+  )
+}
 
 build_base_data_from_csv <- function(customer_csv_path, tx_csv_path) {
   customer_raw <- readr::read_csv(customer_csv_path, show_col_types = FALSE) %>%
-    mutate(customer_id = as.numeric(customer_id))
-
+    dplyr::mutate(customer_id = as.numeric(customer_id))
+  
   tx_clean <- readr::read_csv(tx_csv_path, show_col_types = FALSE) %>%
-    mutate(
+    dplyr::mutate(
       customer_id = as.numeric(customer_id),
       date = as.Date(date),
       amount = as.numeric(amount),
       type = as.character(type)
     ) %>%
-    filter(!is.na(customer_id), !is.na(date), !is.na(amount), amount > 0)
-
+    dplyr::filter(!is.na(customer_id), !is.na(date), !is.na(amount), amount > 0)
+  
   if (nrow(tx_clean) == 0) {
     stop("transactions_data.csv has no valid rows after cleaning.", call. = FALSE)
   }
-
+  
   snapshot_date <- max(tx_clean$date, na.rm = TRUE)
-
+  
   tx_features <- tx_clean %>%
-    group_by(customer_id) %>%
-    summarise(
-      monthly_transaction_count = n() / pmax(n_distinct(format(date, "%Y-%m")), 1),
+    dplyr::group_by(customer_id) %>%
+    dplyr::summarise(
+      monthly_transaction_count = dplyr::n() / pmax(dplyr::n_distinct(format(date, "%Y-%m")), 1),
       average_transaction_value = mean(amount, na.rm = TRUE),
       total_transaction_volume = sum(amount, na.rm = TRUE),
-      transaction_frequency = n() / pmax(as.numeric(max(date) - min(date)) + 1, 1),
-      avg_daily_transactions = n() / pmax(n_distinct(date), 1),
+      transaction_frequency = dplyr::n() / pmax(as.numeric(max(date) - min(date)) + 1, 1),
+      avg_daily_transactions = dplyr::n() / pmax(dplyr::n_distinct(date), 1),
       weekend_transaction_ratio = mean(weekdays(date) %in% c("Saturday", "Sunday"), na.rm = TRUE),
-      feature_usage_diversity = n_distinct(type),
+      feature_usage_diversity = dplyr::n_distinct(type),
       customer_tenure = as.numeric(snapshot_date - min(date)) + 1,
       .groups = "drop"
     )
   
-
-  # Avoid duplicated names like foo.x/foo.y when customer_raw already contains
-  # similarly named engineered columns. We prefer the transaction-engineered versions.
   overlap <- intersect(setdiff(names(tx_features), "customer_id"), names(customer_raw))
+  
   base_data <- customer_raw %>%
-    select(-any_of(overlap)) %>%
-    left_join(tx_features, by = "customer_id")
-
+    dplyr::select(-dplyr::any_of(overlap)) %>%
+    dplyr::left_join(tx_features, by = "customer_id")
+  
   product_flag_cols <- intersect(
     c(
-      "savings_account", "credit_card", "personal_loan", "investment_account", "insurance_product",
-      "bill_payment_user", "auto_savings_enabled"
+      "savings_account", "credit_card", "personal_loan", "investment_account",
+      "insurance_product", "bill_payment_user", "auto_savings_enabled"
     ),
     names(base_data)
   )
-
+  
   if (length(product_flag_cols) > 0) {
     base_data <- base_data %>%
-      mutate(
+      dplyr::mutate(
         active_products = rowSums(
-          across(
-            all_of(product_flag_cols),
+          dplyr::across(
+            dplyr::all_of(product_flag_cols),
             ~ as.numeric(tolower(as.character(.x)) %in% c("1", "true", "yes", "y", "active"))
           ),
           na.rm = TRUE
         )
       )
   }
-
+  
   if ("app_logins_frequency" %in% names(base_data)) {
-    base_data <- base_data %>% mutate(app_logins_frequency = as.numeric(app_logins_frequency))
+    base_data <- base_data %>%
+      dplyr::mutate(app_logins_frequency = as.numeric(app_logins_frequency))
   }
   
   cus_clean <- customer_raw %>%
-    mutate(
-      across(customer_segment, ~ factor(.x, levels = c("inactive", "occasional", "regular", "power"))),
-      across(clv_segment, ~ factor(.x, levels = c("Bronze", "Silver", "Gold", "Platinum"))),
-      across(income_bracket, ~ factor(.x, levels = c("Low", "Medium", "High", "Very High")))
+    dplyr::mutate(
+      dplyr::across(
+        dplyr::all_of(intersect("customer_segment", names(.))),
+        ~ factor(.x, levels = c("inactive", "occasional", "regular", "power"))
+      ),
+      dplyr::across(
+        dplyr::all_of(intersect("clv_segment", names(.))),
+        ~ factor(.x, levels = c("Bronze", "Silver", "Gold", "Platinum"))
+      ),
+      dplyr::across(
+        dplyr::all_of(intersect("income_bracket", names(.))),
+        ~ factor(.x, levels = c("Low", "Medium", "High", "Very High"))
+      )
     )
   
   time_data <- tx_clean %>%
-    inner_join(cus_clean, by = "customer_id")
-
-  return(list(
+    dplyr::inner_join(cus_clean, by = "customer_id")
+  
+  list(
     base_data = base_data,
     time_data = time_data
-    ))
+  )
 }
 
 customer_csv_candidates <- c(
@@ -121,53 +155,6 @@ tx_csv_candidates <- c(
   file.path("..", "RShiny", "data", "transactions_data.csv"),
   file.path("..", "data", "transactions_data.csv")
 )
-
-if (!is.na(base_data_path)) {
-  data_bundle <- readRDS("data/shiny_base_data.rds")
-  base_data <- data_bundle$base_data
-  time_data <- data_bundle$time_data
-} else {
-  customer_csv_path <- find_existing_path(customer_csv_candidates)
-  tx_csv_path <- find_existing_path(tx_csv_candidates)
-  data_bundle <- build_base_data_from_csv(customer_csv_path, tx_csv_path)
-  base_data <- data_bundle$base_data
-  time_data <- data_bundle$time_data
-  
-  if (is.na(customer_csv_path) || is.na(tx_csv_path)) {
-    stop(
-      paste0(
-        "Unable to find shiny_base_data.rds AND required CSV files. ",
-        "RDS paths tried: ", paste(rds_candidates, collapse = ", "), ". ",
-        "Customer CSV paths tried: ", paste(customer_csv_candidates, collapse = ", "), "; ",
-        "transactions CSV paths tried: ", paste(tx_csv_candidates, collapse = ", "), "."
-      ),
-      call. = FALSE
-    )
-  }
-  
-  data_bundle <- build_base_data_from_csv(customer_csv_path, tx_csv_path)
-  base_data <- data_bundle$base_data
-  time_data <- data_bundle$time_data
-  
-  output_rds_candidates <- c(
-    file.path("RShiny", "data", "shiny_base_data.rds"),
-    file.path("data", "shiny_base_data.rds")
-  )
-  
-  output_path <- output_rds_candidates[dir.exists(dirname(output_rds_candidates))][1]
-  
-  if (!is.na(output_path)) {
-    tryCatch(
-      {
-        saveRDS(data_bundle, output_path)
-      },
-      error = function(e) {
-        message("Could not save shiny_base_data.rds: ", conditionMessage(e))
-      }
-    )
-  }
-}
-
 
 
 # Global Variables
@@ -265,7 +252,7 @@ ClusterRow1 <- fluidRow(
          card(title = "Filter Variables", status = "info", solidHeader = FALSE, width = NULL,
              selectizeInput("corr_vars", "Select Variables:", 
                             choices = cluster_vars, multiple = TRUE, 
-                            selected = cluster_vars,
+                            selected = cluster_vars[1:4],
                             options = list(plugins = list("remove_button"))), 
              uiOutput("corr_warning")
          )
@@ -279,18 +266,44 @@ ClusterRow1 <- fluidRow(
 # STEP 2: Method Selection & Evaluation
 ClusterRow2 <- fluidRow(
   column(3,
-         card(title = "Clustering Method", status = "info", solidHeader = FALSE, width = NULL,
-             radioButtons("clust_method", "Select Algorithm:", 
-                          choices = c("K-means", "PAM (CLARA)", "GMM"), 
-                          selected = "K-means")
+         card(
+           title = "Clustering Method",
+           status = "info",
+           solidHeader = FALSE,
+           width = NULL,
+           
+           radioButtons(
+             "clust_method",
+             "Select Algorithm:",
+             choices = c("K-means", "PAM (CLARA)", "GMM"),
+             selected = "K-means"
+           ),
+           
+           br(),
+           
+           actionButton(
+             "confirm_method",
+             "Confirm Algorithm",
+             class = "btn-primary"
+           ),
+           
+           br(), br(),
+           
+           tags$small(
+             "Please confirm the selected algorithm before generating evaluation plots."
+           )
          )
   ),
   column(9,
-         card(title = "Model Evaluation (Optimal k)", status = "primary", solidHeader = TRUE, width = NULL,
-             uiOutput("eval_plots_ui"),
-             hr(), 
-             h4("How to read the plot?", style = "color: #2E3440; font-weight: bold;"),
-             uiOutput("eval_text")
+         card(
+           title = "Model Evaluation (Optimal k)",
+           status = "primary",
+           solidHeader = TRUE,
+           width = NULL,
+           uiOutput("eval_plots_ui"),
+           hr(),
+           h4("How to read the plot?", style = "color: #2E3440; font-weight: bold;"),
+           uiOutput("eval_text")
          )
   )
 )
@@ -298,13 +311,38 @@ ClusterRow2 <- fluidRow(
 # STEP 3: Cluster Size
 ClusterRow3 <- fluidRow(
   column(3,
-         card(title = "Number of k :", status = "info", solidHeader = FALSE, width = NULL,
-             selectInput("k_val", "Number of k :", choices = 2:10, selected = 3)
+         card(
+           title = "Clustering Settings",
+           status = "info",
+           solidHeader = FALSE,
+           width = NULL,
+           
+           selectInput("k_val", "Number of k :", choices = 2:10, selected = 3),
+           
+           br(),
+           
+           actionButton(
+             "run_cluster",
+             "Run Clustering",
+             class = "btn-primary"
+           ),
+           
+           br(), br(),
+           
+           tags$small(
+             "After selecting variables, method, and k, click this button to generate the clustering results."
+           )
          )
   ),
   column(9,
-         card(title = "STEP3: Interpretation", status = "primary", solidHeader = TRUE, width = NULL, align = "center",
-             withSpinner(plotOutput("sizePlot", height = "500px")))
+         card(
+           title = "STEP 3: Cluster Size Distribution",
+           status = "primary",
+           solidHeader = TRUE,
+           width = NULL,
+           align = "center",
+           withSpinner(plotOutput("sizePlot", height = "500px"))
+         )
   )
 )
 
@@ -461,25 +499,15 @@ customer_types <-  c("Gender" = "gender",
                      "Income Bracket" = "income_bracket")
 
 time_dashboard_filters <- sidebar(
-  title= h3("Dashboard Filters"),
-  bg="lightgrey",
-  radioButtons(inputId = "time_tx_type",
-               label = "Transaction type",
-               choices = c("All", unique(time_data$type))),
-  dateRangeInput(inputId = "time_date_range",
-                 label = "Transaction Date Range",
-                 start = "2023-01-01",
-                 end = "2023-12-31",
-                 format = "yyyy-mm-dd"),
-  selectInput(inputId = "time_cus_seg",
-              label = "Segment Customers by", 
-              choices = customer_types),
-  checkboxGroupInput(inputId = "time_selected_seg", 
-                     "Select Segments:", choices = NULL),
-  actionLink("select_all_seg", "Select All / Reset",
-             class = "btn btn-outline-primary btn-sm")
-  
-  )
+  title = h3("Dashboard Filters"),
+  bg = "lightgrey",
+  uiOutput("time_tx_type_ui"),
+  dateRangeInput("time_date_range", "Transaction Date Range",
+                 start = "2023-01-01", end = "2023-12-31", format = "yyyy-mm-dd"),
+  selectInput("time_cus_seg", "Segment Customers by", choices = customer_types),
+  checkboxGroupInput("time_selected_seg", "Select Segments:", choices = NULL),
+  actionLink("select_all_seg", "Select All / Reset", class = "btn btn-outline-primary btn-sm")
+)
   
 time_key_stats <- layout_column_wrap(
   fill = TRUE,
@@ -677,6 +705,55 @@ ui <- page_navbar(
 #====================================================
 server <- function(input, output, session) { 
   
+  time_data_rv <- reactiveVal(NULL)
+  
+  load_time_data <- function() {
+    if (is.null(time_data_rv())) {
+      if (is.na(time_data_path)) {
+        stop("shiny_time_data.rds not found.", call. = FALSE)
+      }
+      
+      message("Loading time_data from: ", time_data_path)
+      td <- readRDS(time_data_path)$time_data
+      time_data_rv(td)
+    }
+    
+    time_data_rv()
+  }
+  
+  output$time_tx_type_ui <- renderUI({
+    td <- load_time_data()
+    radioButtons(
+      "time_tx_type",
+      "Transaction type",
+      choices = c("All", sort(unique(td$type))),
+      selected = "All"
+    )
+  })
+  
+  raw_filtered_data <- reactive({
+    req(input$time_tx_type, input$time_date_range, input$time_cus_seg, input$time_selected_seg)
+    
+    td <- load_time_data()
+    dt <- as.data.table(td)
+    
+    res <- dt[date >= as.Date(input$time_date_range[1]) &
+                date <= as.Date(input$time_date_range[2])]
+    
+    if (input$time_tx_type != "All") {
+      res <- res[type == input$time_tx_type]
+    }
+    
+    col_name <- input$time_cus_seg
+    res <- res[res[[col_name]] %in% input$time_selected_seg]
+    
+    droplevels(as.data.frame(res))
+  })
+  
+  confirmed_method <- eventReactive(input$confirm_method, {
+    input$clust_method
+  }, ignoreInit = FALSE)
+  
   # --- STEP 1: Correlation Logic ---
   output$corr_warning <- renderUI({
     req(input$corr_vars)
@@ -722,138 +799,270 @@ server <- function(input, output, session) {
       theme(axis.text.x = element_text(angle = 45, hjust = 1), panel.grid.major = element_blank())
   })
   
-  # --- STEP 2: Method Evaluation Logic ---
+  # --------- STEP 2: Evaluation UI ---------
+
   output$eval_plots_ui <- renderUI({
-    if (input$clust_method == "K-means") {
+    if (input$confirm_method == 0) {
+      return(tags$p("Please confirm an algorithm to generate the evaluation plot."))
+    }
+    
+    if (confirmed_method() == "K-means") {
       fluidRow(
         column(6, withSpinner(plotOutput("elbowPlot", height = "400px"))),
         column(6, withSpinner(plotOutput("ratioPlot", height = "400px")))
       )
-    } else if (input$clust_method == "PAM (CLARA)") {
+    } else if (confirmed_method() == "PAM (CLARA)") {
       withSpinner(plotOutput("silPlot", height = "400px"))
     } else {
       withSpinner(plotOutput("bicPlot", height = "400px"))
     }
   })
   
+  # --------- STEP 2: Evaluation text ---------
+
   output$eval_text <- renderUI({
-    if(input$clust_method == "K-means") {
-      HTML("<p><b>Elbow (WSS):</b> The “elbow” point represents a balance between model simplicity and cluster compactness. After this point, increasing the number of clusters yields diminishing returns in terms of improved cluster cohesion.</p>
-            <p><b>BetweenSS / TotalSS ratio:</b> This ratio measures how much of the total variance in the data is explained by the clustering structure. As k increases, the ratio typically increases but eventually stabilises. The optimal k is often found where the improvement becomes marginal.</p>")
-    } else if(input$clust_method == "PAM (CLARA)") {
-      HTML("<p><b>CLARA Score:</b> For each observation, the silhouette value ranges from −1 to 1. Values close to 1 indicate well-separated clusters. The optimal number of clusters is typically the value of k that maximises the average silhouette score.</p>")
+    if (input$confirm_method == 0) {
+      return(tags$p("Please confirm an algorithm first."))
+    }
+    
+    if (confirmed_method() == "K-means") {
+      HTML("
+      <p><b>Elbow (WSS):</b> Look for the point where the decrease in WSS starts to slow down.</p>
+      <p><b>BetweenSS / TotalSS ratio:</b> Higher values indicate stronger separation between clusters.</p>
+    ")
+    } else if (confirmed_method() == "PAM (CLARA)") {
+      HTML("
+      <p><b>Average Silhouette Score:</b> Higher values suggest better cluster compactness and separation.</p>
+    ")
     } else {
-      HTML("<p><b>GMM BIC Plot:</b> Unlike K-means and PAM, GMM does not assume spherical clusters. Model selection is based on the Bayesian Information Criterion (BIC). The model with the highest BIC (or clear peak) is generally selected as the optimal model.</p>")
+      HTML("
+      <p><b>GMM BIC Plot:</b> Lower BIC generally indicates a better model fit with appropriate complexity.</p>
+    ")
     }
   })
+
+  # --------- STEP 2A: K-means evaluation ---------
   
-  kmeans_metrics <- reactive({
-    req(input$corr_vars, input$clust_method == "K-means")
-    X <- base_data %>% select(all_of(input$corr_vars)) %>% scale()
-    purrr::map_dfr(2:15, function(k) {
+  kmeans_metrics <- eventReactive(input$confirm_method, {
+    req(input$corr_vars, confirmed_method() == "K-means")
+    
+    X <- base_data %>%
+      dplyr::select(all_of(input$corr_vars)) %>%
+      dplyr::mutate(across(everything(), as.numeric)) %>%
+      as.matrix()
+    
+    X <- scale(X)
+    
+    purrr::map_dfr(2:8, function(k) {
       set.seed(2022)
-      km <- kmeans(X, centers = k, nstart = 25)
-      tibble(k = k, tot_withinss = km$tot.withinss, between_ratio = km$betweenss / km$totss)
+      km <- kmeans(X, centers = k, nstart = 10, iter.max = 50)
+      
+      tibble::tibble(
+        k = k,
+        tot_withinss = km$tot.withinss,
+        between_ratio = km$betweenss / km$totss
+      )
     })
-  })
+  }, ignoreInit = FALSE)
   
   output$elbowPlot <- renderPlot({
-    df <- kmeans_metrics()
-    if(is.null(df)) return(NULL)
-    ggplot(df, aes(k, tot_withinss)) + geom_line(color = "#7B8B97", linewidth = 1) + geom_point(color = "#C3A6A0", size = 3) +
-      labs(title = "Elbow Method", x = "Number of Clusters (k)", y = "Total Within-Cluster Sum of Squares") + theme_minimal()
+    req(confirmed_method() == "K-means")
+    metrics <- kmeans_metrics()
+    
+    ggplot(metrics, aes(x = k, y = tot_withinss)) +
+      geom_line() +
+      geom_point() +
+      labs(
+        title = "Elbow Plot (WSS)",
+        x = "Number of Clusters (k)",
+        y = "Total Within-Cluster Sum of Squares"
+      ) +
+      theme_minimal(base_size = 14)
   })
   
   output$ratioPlot <- renderPlot({
-    df <- kmeans_metrics()
-    if(is.null(df)) return(NULL)
-    ggplot(df, aes(k, between_ratio)) + geom_line(color = "#7B8B97", linewidth = 1) + geom_point(color = "#A8B7AB", size = 3) +
-      scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
-      labs(title = "BetweenSS / TotalSS Ratio", x = "Number of Clusters (k)", y = "BetweenSS / TotalSS") + theme_minimal()
+    req(confirmed_method() == "K-means")
+    metrics <- kmeans_metrics()
+    
+    ggplot(metrics, aes(x = k, y = between_ratio)) +
+      geom_line() +
+      geom_point() +
+      labs(
+        title = "BetweenSS / TotalSS Ratio",
+        x = "Number of Clusters (k)",
+        y = "BetweenSS / TotalSS"
+      ) +
+      theme_minimal(base_size = 14)
   })
+
+  # --------- STEP 2B: PAM (CLARA) evaluation ---------
+
+  clara_metrics <- eventReactive(input$confirm_method, {
+    req(input$corr_vars, confirmed_method() == "PAM (CLARA)")
+    
+    X <- base_data %>%
+      dplyr::select(all_of(input$corr_vars)) %>%
+      dplyr::mutate(across(everything(), as.numeric)) %>%
+      as.matrix()
+    
+    X <- scale(X)
+    
+    purrr::map_dfr(2:8, function(k) {
+      cl <- cluster::clara(X, k = k, samples = 3)
+      
+      tibble::tibble(
+        k = k,
+        avg_silhouette = cl$silinfo$avg.width
+      )
+    })
+  }, ignoreInit = FALSE)
   
   output$silPlot <- renderPlot({
-    req(input$corr_vars, input$clust_method == "PAM (CLARA)")
-    X <- base_data %>% select(all_of(input$corr_vars)) %>% scale()
-    clara_res <- purrr::map_dfr(2:15, function(k) {
-      cl <- cluster::clara(X, k = k, samples = 5)
-      tibble(k = k, avg_silhouette = cl$silinfo$avg.width)
-    })
-    ggplot(clara_res, aes(k, avg_silhouette)) + 
-      geom_line(color = "#7B8B97", linewidth = 1) + geom_point(color = "#C3A6A0", size = 3) +
-      labs(title = "CLARA Score", x = "Number of Clusters (k)", y = "Average Silhouette") + theme_minimal()
+    req(confirmed_method() == "PAM (CLARA)")
+    clara_res <- clara_metrics()
+    
+    ggplot(clara_res, aes(x = k, y = avg_silhouette)) +
+      geom_line() +
+      geom_point() +
+      labs(
+        title = "Average Silhouette Score",
+        x = "Number of Clusters (k)",
+        y = "Average Silhouette Width"
+      ) +
+      theme_minimal(base_size = 14)
   })
+
+  # --------- STEP 2C: GMM evaluation ---------
+
+  gmm_metrics <- eventReactive(input$confirm_method, {
+    req(input$corr_vars, confirmed_method() == "GMM")
+    
+    X <- base_data %>%
+      dplyr::select(all_of(input$corr_vars)) %>%
+      dplyr::mutate(across(everything(), as.numeric)) %>%
+      as.matrix()
+    
+    X <- scale(X)
+    
+    validate(
+      need(nrow(X) <= 3000, "GMM evaluation is disabled for large datasets.")
+    )
+    
+    gmm_fit <- mclust::Mclust(X, G = 2:8)
+    
+    tibble::tibble(
+      k = as.numeric(names(gmm_fit$BIC)),
+      BIC = as.numeric(gmm_fit$BIC)
+    ) %>%
+      dplyr::filter(!is.na(BIC))
+  }, ignoreInit = FALSE)
   
   output$bicPlot <- renderPlot({
-    req(input$corr_vars, input$clust_method == "GMM")
-    X <- base_data %>% select(all_of(input$corr_vars)) %>% scale()
-    gmm_fit <- mclust::Mclust(X, G = 2:15)
-    par(xpd = TRUE, mar = c(5, 4, 4, 13))  
-    plot(gmm_fit, what = "BIC", legendArgs = list(x = "right", inset = c(-0.6, 0), cex = 0.8))
-    par(xpd = FALSE)
+    req(confirmed_method() == "GMM")
+    bic_df <- gmm_metrics()
+    
+    ggplot(bic_df, aes(x = k, y = BIC)) +
+      geom_line() +
+      geom_point() +
+      labs(
+        title = "GMM BIC Plot",
+        x = "Number of Clusters (k)",
+        y = "BIC"
+      ) +
+      theme_minimal(base_size = 14)
   })
+
+  # --------- STEP 3 & 4: Final clustering ---------
   
-  # --- STEP 3 & 4: Final Clustering & Profiling ---
-  dynamic_clusters <- reactive({
-    req(input$corr_vars, input$k_val, input$clust_method)
-    X <- base_data %>% select(all_of(input$corr_vars)) %>% mutate(across(everything(), as.numeric)) %>% scale()
+  dynamic_clusters <- eventReactive(input$run_cluster, {
+    req(input$corr_vars, input$k_val, confirmed_method())
+    
+    X <- base_data %>%
+      dplyr::select(all_of(input$corr_vars)) %>%
+      dplyr::mutate(across(everything(), as.numeric)) %>%
+      as.matrix()
+    
+    X <- scale(X)
     k <- as.numeric(input$k_val)
     
-    if (input$clust_method == "K-means") {
+    if (confirmed_method() == "K-means") {
       set.seed(2022)
-      km <- kmeans(X, centers = k, nstart = 25)
-      clusters <- factor(km$cluster)
-    } else if (input$clust_method == "PAM (CLARA)") { 
-      cl <- cluster::clara(X, k = k, samples = 5)
-      clusters <- factor(cl$clustering)
+      fit <- kmeans(X, centers = k, nstart = 10, iter.max = 50)
+      clusters <- factor(fit$cluster)
+      
+    } else if (confirmed_method() == "PAM (CLARA)") {
+      fit <- cluster::clara(X, k = k, samples = 3)
+      clusters <- factor(fit$clustering)
+      
     } else {
-      gmm <- mclust::Mclust(X, G = k)
-      clusters <- factor(gmm$classification)
+      validate(
+        need(nrow(X) <= 3000, "GMM is only available for smaller datasets in the app.")
+      )
+      fit <- mclust::Mclust(X, G = k)
+      clusters <- factor(fit$classification)
     }
     
-    base_data %>% mutate(cluster = clusters)
-  })
-  
+    base_data %>% dplyr::mutate(cluster = clusters)
+  }, ignoreInit = TRUE)
+
+  # --------- STEP 3: Cluster size plot ---------
+
   output$sizePlot <- renderPlot({
     clustered_data <- dynamic_clusters()
-    if(is.null(clustered_data)) return(NULL)
+    if (is.null(clustered_data)) return(NULL)
     
-    color_palette <- colorRampPalette(morandi_colors)(length(unique(clustered_data$cluster)))
+    color_palette <- colorRampPalette(morandi_colors)(
+      length(unique(clustered_data$cluster))
+    )
     
     ggplot(clustered_data, aes(x = cluster, fill = cluster)) +
-      geom_bar(aes(y = after_stat(count)/sum(after_stat(count)))) +
+      geom_bar(aes(y = after_stat(count) / sum(after_stat(count)))) +
       scale_y_continuous(labels = scales::percent) +
-      scale_fill_manual(values = color_palette) + 
-      labs(title = paste("Cluster Size Distribution -", input$clust_method),
-           x = "Cluster", y = "Proportion of Customers") +
+      scale_fill_manual(values = color_palette) +
+      labs(
+        title = paste("Cluster Size Distribution -", confirmed_method()),
+        x = "Cluster",
+        y = "Proportion of Customers"
+      ) +
       theme_minimal(base_size = 14) +
       theme(legend.position = "none")
   })
   
+  # --------- STEP 4: Parallel plot ---------
   output$pPlot <- renderParallelPlot({
     clustered_data <- dynamic_clusters()
-    if(is.null(clustered_data)) return(NULL)
+    if (is.null(clustered_data)) return(NULL)
     
     pp_data <- clustered_data %>%
       dplyr::filter(!is.na(cluster)) %>%
-      dplyr::select(cluster, dplyr::all_of(input$corr_vars)) 
+      dplyr::select(cluster, dplyr::all_of(input$corr_vars))
     
-    histoVisibility <- names(pp_data)
+    sample_n <- min(1000, nrow(pp_data))
+    
+    if (sample_n > 0) {
+      pp_data <- pp_data %>%
+        dplyr::slice_sample(n = sample_n)
+    }
     
     parallelPlot::parallelPlot(
       data = pp_data,
       refColumnDim = "cluster",
       rotateTitle = TRUE,
-      histoVisibility = histoVisibility
+      histoVisibility = names(pp_data)
     )
   })
   
+  # -------------------------------
+  # STEP 4: Demographic composition
+  # -------------------------------
   output$demoPlot <- renderPlot({
     req(input$demo_var)
+    
     clustered_data <- dynamic_clusters()
-    if(is.null(clustered_data)) return(NULL)
-
-    plot_data <- clustered_data %>% filter(!is.na(.data[[input$demo_var]]))
+    if (is.null(clustered_data)) return(NULL)
+    
+    plot_data <- clustered_data %>%
+      dplyr::filter(!is.na(.data[[input$demo_var]]))
     
     num_categories <- length(unique(plot_data[[input$demo_var]]))
     color_palette <- colorRampPalette(morandi_colors)(num_categories)
@@ -861,9 +1070,13 @@ server <- function(input, output, session) {
     ggplot(plot_data, aes(x = cluster, fill = .data[[input$demo_var]])) +
       geom_bar(position = "fill") +
       scale_y_continuous(labels = scales::percent) +
-      scale_fill_manual(values = color_palette) + 
-      labs(title = paste("Demographic Distribution by", input$demo_var),
-           x = "Cluster", y = "Proportion", fill = input$demo_var) +
+      scale_fill_manual(values = color_palette) +
+      labs(
+        title = paste("Demographic Distribution by", input$demo_var),
+        x = "Cluster",
+        y = "Proportion",
+        fill = input$demo_var
+      ) +
       theme_minimal(base_size = 14)
   })
 
@@ -1404,28 +1617,6 @@ server <- function(input, output, session) {
       prev_valid_sel(current)
     }
   }, ignoreNULL = FALSE)
-  
-  # Reactive: Filter data
-  raw_filtered_data <- reactive({
-    req(input$time_tx_type, input$time_date_range, input$time_cus_seg, input$time_selected_seg)
-    
-    dt <- as.data.table(time_data)
-    
-    # Filter Dates (Ensure we use the internal dt column correctly)
-    res <- dt[date >= as.Date(input$time_date_range[1]) & 
-                date <= as.Date(input$time_date_range[2])]
-    
-    # Filter Transaction Type
-    if (input$time_tx_type != "All") {
-      res <- res[type == input$time_tx_type]
-    }
-    
-    # Filter Customer Segment
-    col_name <- input$time_cus_seg
-    res <- res[res[[col_name]] %in% input$time_selected_seg]
-    
-    return(droplevels(as.data.frame(res)))
-  })
   
   # Apply a 400ms delay after user clicks checkboxes before app recalculates
   dashboard_data <- raw_filtered_data %>% debounce(400)
