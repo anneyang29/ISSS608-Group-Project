@@ -1,0 +1,24 @@
+---
+title: "test"
+format: html
+---
+
+```{r}
+pacman::p_load(shiny, shinydashboard, shinycssloaders, 
+               tidyverse, dplyr, readr, ggcorrplot, parallelPlot, 
+               cluster, mclust, fresh, bslib, bsicons,  tsibble, fable, 
+               feasts, tidymodels, timetk, 
+               modeltime, rlang, plotly, data.table, lubridate)
+
+source("time_functions.R")
+```
+```{r}
+transactions <- read_csv("data/transactions_data.csv")
+customers <- read_csv("data/customer_data.csv")
+```
+```{r}
+data <- transactions%>%
+  inner_join(customers, by="customer_id")
+
+seasonal_data <- get_seasonal_data(data, "clv_segment")
+```

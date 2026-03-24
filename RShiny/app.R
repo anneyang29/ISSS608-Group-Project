@@ -6,7 +6,9 @@
 #====================================================
 pacman::p_load(shiny, shinydashboard, shinycssloaders, 
                tidyverse, dplyr, readr, ggcorrplot, parallelPlot, 
-               cluster, mclust, fresh)
+               cluster, mclust, fresh, bslib, bsicons,  tsibble, fable, 
+               feasts, tidymodels, timetk, 
+               modeltime, rlang, plotly, data.table, lubridate)
 
 #Import data 
 #====================================================
@@ -56,6 +58,7 @@ build_base_data_from_csv <- function(customer_csv_path, tx_csv_path) {
       customer_tenure = as.numeric(snapshot_date - min(date)) + 1,
       .groups = "drop"
     )
+  
 
   # Avoid duplicated names like foo.x/foo.y when customer_raw already contains
   # similarly named engineered columns. We prefer the transaction-engineered versions.
@@ -88,8 +91,21 @@ build_base_data_from_csv <- function(customer_csv_path, tx_csv_path) {
   if ("app_logins_frequency" %in% names(base_data)) {
     base_data <- base_data %>% mutate(app_logins_frequency = as.numeric(app_logins_frequency))
   }
+  
+  cus_clean <- customer_raw %>%
+    mutate(
+      across(customer_segment, ~ factor(.x, levels = c("inactive", "occasional", "regular", "power"))),
+      across(clv_segment, ~ factor(.x, levels = c("Bronze", "Silver", "Gold", "Platinum"))),
+      across(income_bracket, ~ factor(.x, levels = c("Low", "Medium", "High", "Very High")))
+    )
+  
+  time_data <- tx_clean %>%
+    inner_join(cus_clean, by = "customer_id")
 
-  base_data
+  return(list(
+    base_data = base_data,
+    time_data = time_data
+    ))
 }
 
 customer_csv_candidates <- c(
@@ -107,11 +123,16 @@ tx_csv_candidates <- c(
 )
 
 if (!is.na(base_data_path)) {
-  base_data <- readRDS(base_data_path)
+  data_bundle <- readRDS("data/shiny_base_data.rds")
+  base_data <- data_bundle$base_data
+  time_data <- data_bundle$time_data
 } else {
   customer_csv_path <- find_existing_path(customer_csv_candidates)
   tx_csv_path <- find_existing_path(tx_csv_candidates)
-
+  data_bundle <- build_base_data_from_csv(customer_csv_path, tx_csv_path)
+  base_data <- data_bundle$base_data
+  time_data <- data_bundle$time_data
+  
   if (is.na(customer_csv_path) || is.na(tx_csv_path)) {
     stop(
       paste0(
@@ -123,20 +144,22 @@ if (!is.na(base_data_path)) {
       call. = FALSE
     )
   }
-
-  base_data <- build_base_data_from_csv(customer_csv_path, tx_csv_path)
-
+  
+  data_bundle <- build_base_data_from_csv(customer_csv_path, tx_csv_path)
+  base_data <- data_bundle$base_data
+  time_data <- data_bundle$time_data
+  
   output_rds_candidates <- c(
     file.path("RShiny", "data", "shiny_base_data.rds"),
     file.path("data", "shiny_base_data.rds")
   )
-
+  
   output_path <- output_rds_candidates[dir.exists(dirname(output_rds_candidates))][1]
-
+  
   if (!is.na(output_path)) {
     tryCatch(
       {
-        saveRDS(base_data, output_path)
+        saveRDS(data_bundle, output_path)
       },
       error = function(e) {
         message("Could not save shiny_base_data.rds: ", conditionMessage(e))
@@ -144,6 +167,7 @@ if (!is.na(base_data_path)) {
     )
   }
 }
+
 
 
 # Global Variables
@@ -207,27 +231,29 @@ morandi_colors <- c(
 
 header <- dashboardHeader(title = " Colombian Fintech Financial Analytics")
 
-sidebar <- dashboardSidebar(
-  sidebarMenu(
-    width = 100,
-    selected = "Clustering",
-    menuItem(
-      "Home",
-      icon = icon("home"),
-      href = "https://anneyang29.github.io/ISSS608-Group-Project/",
-      newtab = TRUE
-    ),
-    menuItem("Clustering Analysis", tabName = "Clustering", icon = icon("users")),
-    menuItem("EDA (Member 2)", tabName = "EDA", icon = icon("chart-bar")),
-    menuItem("Confirmatory Analysis", tabName = "Confirmatory", icon = icon("chart-line"))
-  )
-)
+# sidebar <- dashboardSidebar(
+#   sidebarMenu(
+#     width = 100,
+#     selected = "Clustering",
+#     menuItem(
+#       "Home",
+#       icon = icon("home"),
+#       href = "https://anneyang29.github.io/ISSS608-Group-Project/",
+#       newtab = TRUE
+#     ),
+#     menuItem("Clustering Analysis", tabName = "Clustering", icon = icon("users")),
+#     menuItem("Confirmatory Analysis", tabName = "Confirmatory", icon = icon("chart-bar")),
+#     menuItem("Time-Oriented Data Analysis", tabName = "Time", icon = icon("chart-line"),
+#              menuSubItem("Dashboard", tabName = "Time_Dashboard"),
+#              menuSubItem("Cashflow Analysis", tabName = "Time_Cashflow"))
+#   )
+# )
 
-mytheme <- create_theme(
-  adminlte_color(light_blue = "#D4C5B9"),
-  adminlte_sidebar(width = "250px", dark_bg = "#2E3440", dark_hover_bg = "#D4C5B9", dark_color = "#FFFFFF"),
-  adminlte_global(content_bg = "#F8F9FA", box_bg = "#FFFFFF", info_box_bg = "#FFFFFF")
-)
+# mytheme <- create_theme(
+#  adminlte_color(light_blue = "#D4C5B9"),
+#  adminlte_sidebar(width = "250px", dark_bg = "#2E3440", dark_hover_bg = "#D4C5B9", dark_color = "#FFFFFF"),
+#  adminlte_global(content_bg = "#F8F9FA", box_bg = "#FFFFFF", info_box_bg = "#FFFFFF")
+# )
 
 #====================================================
 # CLUSTERING UI - START
@@ -236,7 +262,7 @@ mytheme <- create_theme(
 # STEP 1: Correlation 
 ClusterRow1 <- fluidRow(
   column(3,
-         box(title = "Filter Variables", status = "info", solidHeader = FALSE, width = NULL,
+         card(title = "Filter Variables", status = "info", solidHeader = FALSE, width = NULL,
              selectizeInput("corr_vars", "Select Variables:", 
                             choices = cluster_vars, multiple = TRUE, 
                             selected = cluster_vars,
@@ -245,7 +271,7 @@ ClusterRow1 <- fluidRow(
          )
   ),
   column(9,
-         box(title = "Correlation Matrix", status = "primary", solidHeader = TRUE, width = NULL, align = "center",
+         card(title = "Correlation Matrix", status = "primary", solidHeader = TRUE, width = NULL, align = "center",
              withSpinner(plotOutput("corrPlot", height = "600px")))
   )
 )
@@ -253,14 +279,14 @@ ClusterRow1 <- fluidRow(
 # STEP 2: Method Selection & Evaluation
 ClusterRow2 <- fluidRow(
   column(3,
-         box(title = "Clustering Method", status = "info", solidHeader = FALSE, width = NULL,
+         card(title = "Clustering Method", status = "info", solidHeader = FALSE, width = NULL,
              radioButtons("clust_method", "Select Algorithm:", 
                           choices = c("K-means", "PAM (CLARA)", "GMM"), 
                           selected = "K-means")
          )
   ),
   column(9,
-         box(title = "Model Evaluation (Optimal k)", status = "primary", solidHeader = TRUE, width = NULL,
+         card(title = "Model Evaluation (Optimal k)", status = "primary", solidHeader = TRUE, width = NULL,
              uiOutput("eval_plots_ui"),
              hr(), 
              h4("How to read the plot?", style = "color: #2E3440; font-weight: bold;"),
@@ -272,12 +298,12 @@ ClusterRow2 <- fluidRow(
 # STEP 3: Cluster Size
 ClusterRow3 <- fluidRow(
   column(3,
-         box(title = "Number of k :", status = "info", solidHeader = FALSE, width = NULL,
+         card(title = "Number of k :", status = "info", solidHeader = FALSE, width = NULL,
              selectInput("k_val", "Number of k :", choices = 2:10, selected = 3)
          )
   ),
   column(9,
-         box(title = "STEP3: Interpretation", status = "primary", solidHeader = TRUE, width = NULL, align = "center",
+         card(title = "STEP3: Interpretation", status = "primary", solidHeader = TRUE, width = NULL, align = "center",
              withSpinner(plotOutput("sizePlot", height = "500px")))
   )
 )
@@ -285,37 +311,39 @@ ClusterRow3 <- fluidRow(
 # STEP 4: Interpretation (Parallel & Demographics)
 ClusterRow4 <- fluidRow(
   column(3,
-         box(title = "Interpretation Settings", status = "info", solidHeader = FALSE, width = NULL,
+         card(title = "Interpretation Settings", status = "info", solidHeader = FALSE, width = NULL,
              selectInput("demo_var", "Demographic Variable:", choices = demo_vars)
          )
   ),
   column(9,
-         box(title = "Behavioural Contrast", status = "primary", solidHeader = TRUE, width = NULL,
+         card(title = "Behavioural Contrast", status = "primary", solidHeader = TRUE, width = NULL,
              withSpinner(parallelPlotOutput("pPlot", height = "450px"))),
          
-         box(title = "Demographic Composition", status = "primary", solidHeader = TRUE, width = NULL, align = "center",
+         card(title = "Demographic Composition", status = "primary", solidHeader = TRUE, width = NULL, align = "center",
              withSpinner(plotOutput("demoPlot", height = "400px")))
   )
 )
 
 # ClusterSubTabs 
-ClusterSubTabs <- tabsetPanel(
-  tabPanel("STEP 1: Correlation", ClusterRow1),
-  tabPanel("STEP 2: Method Select", ClusterRow2),
-  tabPanel("STEP 3: Cluster Size", ClusterRow3),
-  tabPanel("STEP 4: Interpretation", ClusterRow4)
+ClusterSubTabs <- navset_card_tab(
+  full_screen = TRUE,
+  title = "Clustering Workflow",
+  nav_panel("STEP 1: Correlation", ClusterRow1),
+  nav_panel("STEP 2: Method Select", ClusterRow2),
+  nav_panel("STEP 3: Cluster Size", ClusterRow3),
+  nav_panel("STEP 4: Interpretation", ClusterRow4)
 )
 
 ConfirmRow1 <- fluidRow(
   column(3,
-         box(title = "H1 Settings", status = "info", solidHeader = FALSE, width = NULL,
+         card(title = "H1 Settings", status = "info", solidHeader = FALSE, width = NULL,
              selectInput("h1_outcome", "Outcome (numeric):", choices = confirm_numeric_vars, selected = h1_outcome_default),
              selectInput("h1_predictor", "Predictor (numeric):", choices = confirm_numeric_vars, selected = h1_predictor_default),
              uiOutput("h1_input_warning")
          )
   ),
   column(9,
-         box(title = "Regression Results", status = "primary", solidHeader = TRUE, width = NULL,
+         card(title = "Regression Results", status = "primary", solidHeader = TRUE, width = NULL,
              uiOutput("h1_sentence"),
              tableOutput("h1_summary"),
              hr(),
@@ -327,7 +355,7 @@ ConfirmRow1 <- fluidRow(
                column(6, withSpinner(plotOutput("h1_diag_qq", height = "260px")))
              )
          ),
-         box(
+         card(
            title = "Chart Interpretation",
            status = "primary",
            solidHeader = TRUE,
@@ -352,7 +380,7 @@ ConfirmRow1 <- fluidRow(
 
 ConfirmRow2 <- fluidRow(
   column(3,
-         box(title = "H2 Settings", status = "info", solidHeader = FALSE, width = NULL,
+         card(title = "H2 Settings", status = "info", solidHeader = FALSE, width = NULL,
              selectInput("h2_group", "Group variable:", choices = confirm_categorical_vars, selected = h2_group_default),
              selectInput("h2_value", "Value (numeric):", choices = confirm_numeric_vars, selected = h2_value_default),
              selectInput(
@@ -383,14 +411,14 @@ ConfirmRow2 <- fluidRow(
          )
   ),
   column(9,
-         box(title = "ANOVA Results (or Kruskal-Wallis)", status = "primary", solidHeader = TRUE, width = NULL,
+         card(title = "ANOVA Results (or Kruskal-Wallis)", status = "primary", solidHeader = TRUE, width = NULL,
              uiOutput("h2_sentence"),
              tableOutput("h2_summary"),
              hr(),
              withSpinner(plotOutput("h2_plot", height = "420px")),
              uiOutput("h2_posthoc_ui")
          ),
-         box(
+         card(
            title = "Chart Interpretation",
            status = "primary",
            solidHeader = TRUE,
@@ -417,27 +445,232 @@ ConfirmSubTabs <- tabsetPanel(
   tabPanel("ANOVA", ConfirmRow2)
 )
 
-body <- dashboardBody(
-  use_theme(mytheme),
-  tabItems(
-    tabItem(tabName = "Clustering", ClusterSubTabs),
-    tabItem(tabName = "EDA", h2("EDA goes here")),
-    tabItem(tabName = "Confirmatory", ConfirmSubTabs)
+#==========================================
+# Time Data Analysis UI 
+#==========================================
+
+# import custom functions
+source("time_functions.R")
+
+# variables for selection
+customer_types <-  c("Gender" = "gender", 
+                     "Acquisition channel" = "acquisition_channel",
+                     "Customer Segment" = "customer_segment",
+                     "Location" = "location",
+                     "Customer Lifetime Value" = "clv_segment",
+                     "Income Bracket" = "income_bracket")
+
+time_dashboard_filters <- sidebar(
+  title= h3("Dashboard Filters"),
+  bg="lightgrey",
+  radioButtons(inputId = "time_tx_type",
+               label = "Transaction type",
+               choices = c("All", unique(time_data$type))),
+  dateRangeInput(inputId = "time_date_range",
+                 label = "Transaction Date Range",
+                 start = "2023-01-01",
+                 end = "2023-12-31",
+                 format = "yyyy-mm-dd"),
+  selectInput(inputId = "time_cus_seg",
+              label = "Segment Customers by", 
+              choices = customer_types),
+  checkboxGroupInput(inputId = "time_selected_seg", 
+                     "Select Segments:", choices = NULL),
+  actionLink("select_all_seg", "Select All / Reset",
+             class = "btn btn-outline-primary btn-sm")
+  
+  )
+  
+time_key_stats <- layout_column_wrap(
+  fill = TRUE,
+  value_box(
+    title = "TOP TX MONTH.",
+    value = textOutput("stat_top_month"),
+    showcase = icon("calendar"),
+    theme = "primary",
+    showcase_layout = "top right", 
+    full_screen = FALSE
   ),
-  tags$div(
-    style = "margin: 10px; padding: 10px 12px; background: #F8F9FA; border-left: 4px solid #D4C5B9;",
-    HTML(
-      paste0(
-        "<b>Data note:</b> This dashboard uses the COFINFAD customer + transaction data provided for the project. ",
-        "Several behavioural metrics (e.g., transaction frequency/volume features) are engineered from the raw transactions and stored in a prepared dataset (<i>shiny_base_data.rds</i>) for faster loading. ",
-        "If the RDS is not found, the app will build it from the CSVs once. ",
-        "The app does not generate new labels such as churn probability; it analyses the fields provided in the dataset."
-      )
-    )
+  value_box(
+    title = "NEW CUSTOMERS",
+    value = textOutput("stat_new_cust"),
+    showcase = icon("user-plus"),
+    theme = "info",
+    showcase_layout = "top right", 
+    full_screen = FALSE
+  ),
+  value_box(
+    title = "M-O-M TX CHANGE",
+    value = textOutput("stat_tx_change"),
+    showcase = icon("chart-line"),
+    theme = "success",
+    showcase_layout = "top right", 
+    full_screen = FALSE
+  ),
+  value_box(
+    title = "TOTAL CUSTOMERS",
+    value = textOutput("stat_total_cust"),
+    showcase = icon("users-viewfinder"),
+    theme = "warning",
+    showcase_layout = "top right", 
+    full_screen = FALSE
   )
 )
 
-ui <- dashboardPage(title = 'Colombian Fintech', header, sidebar, body)    
+bubble_plot <- card(
+  full_screen = TRUE,
+  card_header(
+    class = "d-flex justify-content-between align-items-center",
+    "Customer Transaction Behavior Over Time",
+    popover(
+      bs_icon("funnel"),
+      title = "Filter",
+      radioButtons("time_granularity", "Time Granularity:", 
+                   choices = c("Month" = "month", "Week" = "week"), 
+                   inline = TRUE),
+      placement = "left"
+    )
+  ),
+  card_body(
+    withSpinner(plotlyOutput("animation_plot"))
+    )
+)
+
+cra_plot <- card(
+  full_screen = TRUE,
+  card_header(
+    class = "d-flex justify-content-between align-items-left",
+    tags$div("Customer Retention Analysis",
+              tooltip(
+                bs_icon("info-circle"),
+                "Retention is calculated from the date of the first transaction."
+    )),
+    popover(
+      bs_icon("funnel"), 
+      title = "Filter",
+      uiOutput("heatmap_segment_ui"),
+      placement = "left"
+    )
+  ),
+  card_body(
+    withSpinner(plotlyOutput("cra_heatmap"))
+  )
+)
+
+seasonal_analysis_card <- navset_card_pill(
+  full_screen = TRUE,
+  placement = "above",
+  
+  nav_panel("Cycle Plot",
+            card_body(
+              popover(
+                bs_icon("funnel"),
+                title = "Filters",
+                radioButtons("season_metric", "Metric:", 
+                             choices = c("Transaction Count" = "tx_count", 
+                                         "Transaction Volume" = "tx_amt", 
+                                         "Unique Users" = "user_count")),
+                placement = "right"
+              ),
+              # Set a fixed height to avoid the 'margins too large' error
+              withSpinner(plotOutput("cycle_plot"))
+            )
+  ),
+  
+  nav_panel("STL Decomposition", 
+            card_body( 
+              popover(
+                bs_icon("funnel"),
+                title = "Filters",
+                radioButtons("stl_metric", "Metric:", 
+                             choices = c("Transaction Count" = "tx_count", 
+                                         "Transaction Volume" = "tx_amt", 
+                                         "Unique Users" = "user_count")),
+                selectInput("stl_model_type", "Decomposition model:", 
+                            choices = c("STL Decomposition" = "STLM", 
+                                        "Classical Decomposition (Additive)" = "Classical (add)", 
+                                        "Classical Decomposition (Multiplicative)" = "Classical (mult)")),
+                selectInput("stl_season", "Seasonal Period:",
+                            choices = c("1 week", "1 month", "3 months")),
+                sliderInput("stl_season_window", "Seasonal window:",
+                            value=7, min=7, max=99, step=2),
+                sliderInput("stl_trend_window", "Trend window:",
+                            value=11, min=11, max=99, step=2),
+                placement = "right"
+              ),
+              withSpinner(plotOutput("stl_plot"))
+            )
+  )
+)
+
+Dashboard <- page_fluid(
+  layout_sidebar(
+    sidebar = time_dashboard_filters,
+    layout_columns(col_widths = 12,
+                    time_key_stats,
+                    bubble_plot,
+                    layout_columns(
+                      col_widths = c(6,6),
+                      cra_plot,
+                      seasonal_analysis_card)
+                  )
+  ))
+
+
+CashflowSubTabs <- tabsetPanel(
+  id = "CashflowSubTabs",
+  tabPanel("Historical Cashflow Analysis", 
+           h2("Title")),
+  tabPanel("Future Cashflow Prediction", 
+           h2("Title2"))
+)
+
+#==========================================
+# Body Layout
+#==========================================
+lux_morandi_theme <- bs_theme(
+  version = 5,
+  bootswatch = "lux",
+  primary = "#2E3440",         # Dark Slate from your original sidebar
+  secondary = "#9297A0",       # Morandi Grey
+  success = "#A8B7AB",         # Morandi Sage
+  info = "#D4C5B9",            # Morandi Sand
+  warning = "#C6B48F",         # Morandi Gold
+  danger = "#C3A6A0",          # Morandi Rose
+  base_font = font_google("Nunito Sans"),
+  heading_font = font_google("Quicksand"),
+  "navbar-bg" = "#2E3440",
+  "navbar-light-color" = "#FFFFFF",
+  "navbar-light-active-color" = "#D4C5B9", # Morandi Sand for the active tab
+  "navbar-light-hover-color" = "#A8B7AB"   # Morandi Sage for hover
+)
+
+ui <- page_navbar(
+  title = HTML("Colombian Fintech <br> Financial Analytics"),
+  theme = lux_morandi_theme,
+  
+  nav_item(tags$a("Home",
+                  href = "https://anneyang29.github.io/ISSS608-Group-Project/",
+                  target = "_blank"
+                    )),
+  nav_panel("Clustering Analysis", ClusterSubTabs),
+  nav_panel("Confirmatory Analysis", ConfirmSubTabs),
+  
+  nav_menu(
+    "Time-Oriented Data Analysis",
+    nav_panel("Transactions Dashboard", Dashboard),
+    nav_panel("Cashflow Analysis", CashflowSubTabs)
+  ),
+  tags$div(
+    style = "margin: 10px; padding: 10px 12px; background: #F8F9FA; border-left: 4px solid #D4C5B9;",
+    HTML( paste0(
+      "<b>Data note:</b> This dashboard uses the COFINFAD customer + transaction data provided for the project. ",
+      "Several behavioural metrics (e.g., transaction frequency/volume features) are engineered from the raw transactions and stored in a prepared dataset (<i>shiny_base_data.rds</i>) for faster loading. ",
+      "If the RDS is not found, the app will build it from the CSVs once. ",
+      "The app does not generate new labels such as churn probability; it analyses the fields provided in the dataset."
+    ))
+  )
+)
 
 #====================================================
 # SERVER - START
@@ -1122,6 +1355,227 @@ server <- function(input, output, session) {
     res <- h2_result()
     res$posthoc
   }, striped = TRUE, bordered = TRUE, spacing = "s", width = "100%")
+  
+  
+  # --- TIME ANALYSIS : DASHBOARD ---
+  
+  # -- 1.1 DASHBOARD FILTERS -- 
+  
+  observeEvent(input$time_cus_seg, {
+    seg_choices <- base_data[[input$time_cus_seg]] %>% 
+      unique() %>% 
+      sort() 
+    
+    # Initialize with all selected
+    updateCheckboxGroupInput(
+      session,
+      inputId = "time_selected_seg",
+      choices = seg_choices,
+      selected = seg_choices 
+    )
+    prev_valid_sel(seg_choices)
+  }, ignoreInit = FALSE, priority = 10)
+  
+  observeEvent(input$select_all_seg, {
+    seg_choices <- base_data[[input$time_cus_seg]] %>% 
+      unique() %>% 
+      sort() %>% 
+      as.character()
+    
+    updateCheckboxGroupInput(
+      session,
+      "time_selected_seg",
+      selected = seg_choices
+    )
+  })
+  
+  # If user unchecks the last box, we force the previous selection back
+  prev_valid_sel <- reactiveVal(character(0))
+  
+  observeEvent(input$time_selected_seg, {
+    current <- input$time_selected_seg
+    
+    if (is.null(current) || length(current) == 0) {
+      # Revert to previous valid selection
+      updateCheckboxGroupInput(session, "time_selected_seg", selected = prev_valid_sel())
+      showNotification("At least one segment must be selected.", type = "warning", duration = 2)
+    } else {
+      # Update the tracker with the valid selection
+      prev_valid_sel(current)
+    }
+  }, ignoreNULL = FALSE)
+  
+  # Reactive: Filter data
+  raw_filtered_data <- reactive({
+    req(input$time_tx_type, input$time_date_range, input$time_cus_seg, input$time_selected_seg)
+    
+    dt <- as.data.table(time_data)
+    
+    # Filter Dates (Ensure we use the internal dt column correctly)
+    res <- dt[date >= as.Date(input$time_date_range[1]) & 
+                date <= as.Date(input$time_date_range[2])]
+    
+    # Filter Transaction Type
+    if (input$time_tx_type != "All") {
+      res <- res[type == input$time_tx_type]
+    }
+    
+    # Filter Customer Segment
+    col_name <- input$time_cus_seg
+    res <- res[res[[col_name]] %in% input$time_selected_seg]
+    
+    return(droplevels(as.data.frame(res)))
+  })
+  
+  # Apply a 400ms delay after user clicks checkboxes before app recalculates
+  dashboard_data <- raw_filtered_data %>% debounce(400)
+  
+  # --- 1.2 KEY STATS ----
+  key_stats_data <- reactive({
+    data <- dashboard_data()
+    req(nrow(data)>0)
+    list(
+      top_month = get_top_month(data),
+      new_cust = get_new_cust(data, input$time_date_range[2]),
+      change = get_tx_change(data),
+      total = n_distinct(data$customer_id)
+    )
+  })
+  
+  # Top tx Month
+  output$stat_top_month <- renderText({
+    res <- key_stats_data()
+    as.character(res$top_month[1])
+  })
+  
+  # 2. Monthly New Customers
+  output$stat_new_cust <- renderText({
+    stats <- key_stats_data()
+    res <- stats$new_cust
+    if(is.null(res) || length(res) == 0) return("0")
+    res
+  })
+  
+  # 3. Transaction Change (%)
+  output$stat_tx_change <- renderText({
+    stats <- key_stats_data()
+    res <- stats$change
+    paste0(round(res, 1), "%")
+  })
+  
+  # 4. Total Customers
+  output$stat_total_cust <- renderText({
+    stats <- key_stats_data()
+    stats$total
+  })
+  
+  # --- 1.3 BUBBLE PLOT ---
+  animation_data_ready <- reactive({
+    req(dashboard_data(), input$time_cus_seg, input$time_granularity)
+    
+    # Call your helper function
+    get_animation_data(
+      dashboard_data(), 
+      selected_type = input$time_cus_seg, 
+      time_metric = input$time_granularity
+    )
+  })
+  
+  output$animation_plot <- renderPlotly({
+    req(session$clientData$output_animation_plot_width > 0)
+    
+    df <- animation_data_ready()
+    req(nrow(df) > 0, input$time_granularity)
+    
+    plot<- get_bubble_plot(df, input$time_cus_seg, input$time_granularity)
+    
+    ggplotly(plot, tooltip="text")%>%
+      layout(autosize = TRUE)
+  })
+  
+  # -- 1.4 CRA HEATMAP --
+  output$heatmap_segment_ui <- renderUI({
+    req(dashboard_data())
+    
+    data <- dashboard_data()
+    
+    choices <- data[[input$time_cus_seg]] %>% 
+      unique() %>% 
+      sort() %>% 
+      stats::na.omit()
+    
+    radioButtons(
+      inputId = "heatmap_specific_segment",
+      label = paste("Select", humanize_var(input$time_cus_seg), ":"),
+      choices = c("All", choices),
+      selected = "All"
+      )
+  })
+  
+  cohort_data_ready <- reactive({
+    req(dashboard_data(), input$time_cus_seg)
+    
+    segment_val <- if (!is.null(input$heatmap_specific_segment)) {
+      input$heatmap_specific_segment
+    } else {
+      "All"
+    }
+    
+    get_cohort_data(
+      dashboard_data(),
+      selected_type = input$time_cus_seg,
+      segment_value = segment_val
+    ) 
+  })
+  
+  output$cra_heatmap <- renderPlotly({
+    
+    df <- cohort_data_ready()
+    req(nrow(df) > 0)
+    
+    p <- get_cra_heatmap(df, input$time_cus_seg, input$heatmap_specific_segment)
+    
+    ggplotly(p, tooltip = "text") %>%
+      layout(
+        autosize = TRUE) %>%
+      hide_colorbar()
+    
+  })
+  
+  # --- 1.5 SEASONAL TREND ANALYSIS---
+  seasonal_ts_ready <- reactive({
+    req(dashboard_data(), input$time_cus_seg, input$time_selected_seg)
+    
+    get_seasonal_data(
+      dashboard_data(),
+      selected_type = input$time_cus_seg,
+      selected_value = input$time_selected_seg
+    )
+  })
+  
+  output$cycle_plot <- renderPlot({
+    df <- seasonal_ts_ready()
+    req(nrow(df) > 0, input$season_metric)
+    
+    get_cycle_plot(df, input$season_metric) +
+      scale_color_manual(values = morandi_colors)
+  })
+  
+  output$stl_plot <- renderPlot({
+    df <- seasonal_ts_ready()
+    req(nrow(df) > 0, input$stl_metric, input$stl_model_type, input$stl_season,
+        input$stl_season_window, input$stl_trend_window)
+    
+    get_stl(
+      data = df,
+      metric=input$stl_metric,
+      modelType=input$stl_model_type, 
+      speriod=input$stl_season, 
+      swindow=input$stl_season_window, 
+      twindow=input$stl_trend_window
+    )
+  })
+
 }
 
 #====================================================

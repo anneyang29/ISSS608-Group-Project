@@ -21,7 +21,7 @@ The following images demonstrate the planned layout for the confirmatory analysi
 
 ### H1: Regression (Behaviour -\> Customer Value)
 
-![H1 confirmatory dashboard - linear regression view](images/Confirmatory_H1.png){alt="H1 confirmatory dashboard - linear regression view"}
+![H1 confirmatory dashboard - linear regression view](images/Confirmatory_H1.png)
 
 This page includes:
 
@@ -37,7 +37,7 @@ The intended decision logic is to reject or not reject H1 based on the selected 
 
 ### H2: Group Difference (Spending by Segment)
 
-![H2 confirmatory dashboard - one-way ANOVA view](images/Confirmatory_H2.png){alt="H2 confirmatory dashboard - one-way ANOVA view"}
+![H2 confirmatory dashboard - one-way ANOVA view](images/Confirmatory_H2.png)
 
 This page includes:
 
@@ -67,25 +67,25 @@ The dashboard will consist of 4 main sections.
 
 **Correlation Analysis** - This allows users to examine the relationships between candidate clustering variables before segmentation is performed. A correlation matrix will be used to highlight highly correlated variables that may introduce redundancy into the clustering model. A warning message will also be shown when the absolute correlation between two variables exceeds a predefined threshold.
 
-![Clustering dashboard - correlation analysis view](images/cluster.png){alt="Clustering dashboard - correlation analysis view"}
+![Clustering dashboard - correlation analysis view](images/cluster.png)
 
 **Clustering Method Selection** - This allows users to compare different clustering methods, such as K-means, PAM, and GMM. Evaluation plots such as the Elbow plot and the BetweenSS / TotalSS ratio plot will help users determine an appropriate number of clusters. Explanatory text will also be provided to guide users in interpreting the diagnostic plots.
 
-![Clustering dashboard - clustering method selection view](images/Clusteringdashboard.png){alt="Clustering dashboard - clustering method selection view"}
+![Clustering dashboard - clustering method selection view](images/Clusteringdashboard.png)
 
 **Cluster Size Distribution** - This allows users to assess how customers are distributed across the selected clusters. The visualisation will show the proportion of customers in each cluster, helping users evaluate whether the segmentation result is balanced and practically interpretable.
 
-![Clustering dashboard - cluster size distribution view](images/clustersize.png){alt="Clustering dashboard - cluster size distribution view"}
+![Clustering dashboard - cluster size distribution view](images/clustersize.png)
 
 **Behavioural Contrast** - This allows users to compare clusters across selected behavioural variables. A parallel coordinate plot will be used to highlight differences in transaction frequency, transaction value, app engagement, product usage, and other clustering variables, so that users can better understand the behavioural patterns of each customer segment.
 
-![Clustering dashboard - behavioural contrast view](images/behavioural-contrast.png){alt="Clustering dashboard - behavioural contrast view"}
+![Clustering dashboard - behavioural contrast view](images/behavioural-contrast.png)
 
 ### Cluster Profiling
 
 **Demographic Composition** - This allows users to compare the demographic composition of each cluster using selected customer characteristics such as gender, age group, or occupation. A proportion-based chart will be used to show whether certain customer groups are more heavily represented in specific clusters, thereby supporting interpretation and customer profiling.
 
-![Cluster profiling dashboard - demographic composition view](images/demographic-composition.png){alt="Cluster profiling dashboard - demographic composition view"}
+![Cluster profiling dashboard - demographic composition view](images/demographic-composition.png)
 
 Time-Oriented Data Analysis
 
