@@ -757,7 +757,7 @@ data_note_ui <- tags$div(
       HTML(paste0(
         "This dashboard uses the COFINFAD customer + transaction data provided for the project. ",
         "Several behavioural metrics (e.g., transaction frequency/volume features) are engineered from the raw transactions and stored in a prepared dataset (<i>shiny_base_data.rds</i>) for faster loading. ",
-        "If the RDS is not found, the app will build it from the CSVs once. ",
+        "If the RDS is not found, the app will rebuild it from the CSVs for the current R session. ",
         "The app does not generate new labels such as churn probability; it analyses the fields provided in the dataset."
       ))
     )
