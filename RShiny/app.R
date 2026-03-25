@@ -153,7 +153,23 @@ read_base_data_bundle <- function(rds_path) {
     return(NULL)
   }
 
-  bundle <- readRDS(rds_path)
+  bundle <- tryCatch(
+    readRDS(rds_path),
+    error = function(err) {
+      message(
+        "Failed to read data bundle from: ",
+        rds_path,
+        " (",
+        conditionMessage(err),
+        ")"
+      )
+      NULL
+    }
+  )
+
+  if (is.null(bundle)) {
+    return(NULL)
+  }
 
   if (
     is.list(bundle) &&
@@ -795,24 +811,64 @@ server <- function(input, output, session) {
     if (is.null(time_data_rv())) {
       if (!is.null(time_data)) {
         time_data_rv(time_data)
-      } else if (!is.na(time_data_path)) {
-        message("Loading time_data from: ", time_data_path)
-        td <- readRDS(time_data_path)$time_data
-        time_data_rv(td)
-      } else if (!is.na(prepared_bundle_path)) {
-        prepared_bundle <- read_prepared_data_bundle(prepared_bundle_path)
+      }
 
-        if (is.null(prepared_bundle)) {
-          stop("Prepared data bundle found, but it does not contain time_data.", call. = FALSE)
+      if (is.null(time_data_rv()) && !is.na(time_data_path)) {
+        message("Loading time_data from: ", time_data_path)
+        td_bundle <- tryCatch(
+          readRDS(time_data_path),
+          error = function(err) {
+            message(
+              "Failed to read time_data RDS from: ",
+              time_data_path,
+              " (",
+              conditionMessage(err),
+              "). Trying other sources."
+            )
+            NULL
+          }
+        )
+
+        td <- if (
+          is.list(td_bundle) &&
+          "time_data" %in% names(td_bundle) &&
+          !is.null(td_bundle$time_data)
+        ) {
+          td_bundle$time_data
+        } else {
+          NULL
         }
 
-        message("Loading time_data from prepared bundle: ", prepared_bundle_path)
-        time_data_rv(prepared_bundle$time_data)
-      } else if (!is.na(customer_csv_path) && !is.na(tx_csv_path)) {
+        if (!is.null(td)) {
+          time_data_rv(td)
+        } else {
+          message("time_data RDS did not contain valid time_data. Trying other sources.")
+        }
+      }
+
+      if (is.null(time_data_rv()) && !is.na(prepared_bundle_path)) {
+        prepared_bundle <- read_prepared_data_bundle(prepared_bundle_path)
+
+        if (!is.null(prepared_bundle)) {
+          message("Loading time_data from prepared bundle: ", prepared_bundle_path)
+          time_data_rv(prepared_bundle$time_data)
+        } else {
+          message("Prepared data bundle did not contain valid time_data. Trying other sources.")
+        }
+      }
+
+      if (is.null(time_data_rv()) && !is.na(customer_csv_path) && !is.na(tx_csv_path)) {
         message("Rebuilding time_data from CSV files.")
         rebuilt_data_bundle <- build_base_data_from_csv(customer_csv_path, tx_csv_path)
+
+        if (is.null(rebuilt_data_bundle$time_data)) {
+          stop("Rebuilt data bundle does not contain time_data.", call. = FALSE)
+        }
+
         time_data_rv(rebuilt_data_bundle$time_data)
-      } else {
+      }
+
+      if (is.null(time_data_rv())) {
         stop("No time_data source found. Deploy shiny_time_data.rds, shiny_base_data.rds, or the source CSV files.", call. = FALSE)
       }
     }
