@@ -1,4 +1,11 @@
 
+humanize_var <- function(x) {
+  if (is.na(x) || is.null(x)) return("")
+  x %>%
+    stringr::str_replace_all("_", " ") %>%
+    stringr::str_squish()
+}
+
 # Filtering data set functions
 
 filter_tx_dates<- function(data, start_date, end_date){
@@ -23,7 +30,13 @@ filter_tx <- function(data, selected_type='All'){
 filter_customer <- function(data, selected_type, selected_value){
   if (is.null(data)) return(NULL)
   
-  data %>% filter(.data[[selected_type]] %in% selected_value)
+  # If "All" is selected, just give back everything immediately
+  if ("All" %in% selected_value) {
+    return(data)
+  }
+  
+  # Otherwise, return the filtered result
+  return(data %>% filter(.data[[selected_type]] %in% selected_value))
 }
 
 #====================================
@@ -285,4 +298,158 @@ get_stl <- function(data, metric, modelType, speriod, swindow=7, twindow=11) {
   }
   
   return(result)
+}
+
+
+#====================================
+# Cashflow module Functions
+#====================================
+
+# filter cashflow data
+
+get_liquidity_data <- function(data, location_value, start_date, end_date, time_metric){
+  
+  filtered_data <- filter_tx_dates(data, start_date, end_date) %>%
+    filter_customer("location", location_value)
+  
+  if (time_metric == "Daily"){
+    result <- filtered_data %>%
+      pivot_wider(names_from = type, 
+                  values_from = amount,
+                  values_fn = sum) %>%
+      replace_na(list(Withdrawal=0, Deposit=0)) %>%
+      group_by(date) %>%
+      summarise(
+        Inflow=sum(Deposit),
+        Outflow=sum(Withdrawal)
+      ) %>%
+      mutate(Group = ifelse(Inflow > Outflow, "Inflow Higher", "Outflow Higher"),
+             net_liquidity = Inflow-Outflow)
+    
+  } else if (time_metric=="Weekly"){
+    result <- filtered_data %>%
+      pivot_wider(names_from = type, 
+                  values_from = amount,
+                  values_fn = sum) %>%
+      replace_na(list(Withdrawal=0, Deposit=0)) %>%
+      mutate(week = yearweek(date),
+             date=as.Date(week))%>%
+      group_by(date) %>%
+      summarise(
+        Inflow=sum(Deposit),
+        Outflow=sum(Withdrawal)
+      ) %>%
+      mutate(Group = ifelse(Inflow > Outflow, "Inflow Higher", "Outflow Higher"),
+             net_liquidity = Inflow-Outflow)
+  }
+  
+  return(result)
+}
+
+#create cashflow linegraph
+get_cashflow_graph <- function(data){
+  ggplot(data, aes(x = date, 
+                   # Add group = 1 here so lines/ribbons can connect
+                   group = 1,
+                   text = paste0("Date: ", date, 
+                                 "<br>Inflow: $", scales::comma(Inflow), 
+                                 "<br>Outflow: $", scales::comma(Outflow),
+                                 "<br>Net: $", scales::comma(net_liquidity)))) +
+    # Ensure fill is mapped inside geom_ribbon
+    geom_ribbon(aes(ymin = pmin(Inflow, Outflow), 
+                    ymax = pmax(Inflow, Outflow), 
+                    fill = Group), alpha = 0.3) +
+    geom_line(aes(y = Inflow, color = "Inflow"), linewidth = 1) +
+    geom_line(aes(y = Outflow, color = "Outflow"), linewidth = 1) +
+    scale_color_manual(values = c("Inflow" = "steelblue", "Outflow" = "coral")) +
+    scale_fill_manual(values = c("Inflow Higher" = "steelblue", "Outflow Higher" = "coral")) +
+    theme_grey() +
+    labs(title = "Inflow vs. Outflow Over Time", 
+         fill = "Net liquidity", color = "Series", 
+         y="Amount ($)",
+         x="Date") +
+    theme(legend.position = "bottom", 
+          legend.direction = "horizontal",
+          legend.box = "horizontal")
+}
+
+
+get_liquidity_cust_data <- function(data, location_value, start_date, end_date, selected_type){
+  
+  filtered_data <- data %>%
+    filter_tx_dates(start_date, end_date) %>%
+    filter_customer("location", location_value)
+  
+  result <- filtered_data %>%
+    group_by(.data[[selected_type]]) %>%
+    summarise(
+      Inflow_amt=sum(ifelse(type=='Deposit', amount,0)),
+      Outflow_amt=sum(ifelse(type=='Withdrawal', amount,0)),
+      Inflow_count=sum(ifelse(type=='Deposit', 1,0)),
+      Outflow_count=sum(ifelse(type=='Withdrawal', 1,0)),
+      Inflow_users = n_distinct(customer_id[type == 'Deposit']),          
+      Outflow_users=n_distinct(customer_id[type == 'Withdrawal'])
+    )%>%
+    ungroup()
+  
+  return(result)
+}
+
+#create customer breakdown graphs
+
+get_barcharts <- function(data, selected_type, metric, viewtype){
+  if (metric=="tx_amt"){
+    selected_cols=c('Inflow_amt', 'Outflow_amt')
+    remove="_amt"
+    y_label <- "Total Amount"
+    
+  } else if(metric=="tx_count"){
+    selected_cols=c('Inflow_count', 'Outflow_count')
+    remove="_count"
+    y_label <- "Transaction Count"
+    
+  } else if (metric=="user_count"){
+    selected_cols=c('Inflow_users', 'Outflow_users')
+    remove="_users"
+    y_label <- "Unique Users"
+      
+  }
+  
+    plot_data <- data %>%
+    select(.data[[selected_type]], all_of(selected_cols)) %>%
+    pivot_longer(
+      cols = selected_cols, 
+      names_to = "Type", 
+      values_to = "Amount"
+    ) %>%
+    mutate(
+      Type = str_remove(Type, remove))%>%
+    group_by(Type) %>%
+    mutate(
+      tooltip_label = if(viewtype == "amt") {
+        scales::comma(Amount)
+      } else {
+        scales::percent(Amount / sum(Amount), accuracy = 0.1)
+      }
+    ) %>%
+    ungroup()
+  
+  plot <- ggplot(plot_data, 
+                 aes(x = Type, y = Amount, fill = .data[[selected_type]],
+                     text = paste0(humanize_var(selected_type), ": ", .data[[selected_type]],
+                                   "<br>Cashflow: ", Type,
+                                   "<br>Value: ", tooltip_label))) +
+    geom_col(position=ifelse(viewtype=="amt", "stack", "fill")) + 
+    scale_y_continuous(labels = if(viewtype == "amt") scales::label_number(scale_cut = scales::cut_short_scale()) else scales::label_percent()) +
+    scale_fill_brewer(palette = "Set2") +
+    theme_grey() +
+    labs(
+      title = paste0("Inflow vs Outflow Composition by ", selected_type),
+      x = "Cashflow",
+      y = ifelse(viewtype == "amt", y_label, "Percentage Contribution"),
+      fill = selected_type
+    )+
+    theme(legend.position = "none")
+  
+  return(plot)
 }

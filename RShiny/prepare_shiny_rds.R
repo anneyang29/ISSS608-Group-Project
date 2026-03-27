@@ -79,7 +79,9 @@ build_base_data_from_csv <- function(customer_csv_path, tx_csv_path) {
         dplyr::all_of(intersect("income_bracket", names(.))),
         ~ factor(.x, levels = c("Low", "Medium", "High", "Very High"))
       )
-    )
+    ) %>%
+    select(customer_id, gender,acquisition_channel, customer_segment,
+           location, clv_segment, income_bracket, first_tx)
   
   time_data <- tx_clean %>%
     dplyr::inner_join(cus_clean, by = "customer_id")
@@ -88,6 +90,16 @@ build_base_data_from_csv <- function(customer_csv_path, tx_csv_path) {
     base_data = base_data,
     time_data = time_data
   )
+}
+
+
+find_existing_path <- function(paths) {
+  existing <- paths[file.exists(paths)]
+  if (length(existing) > 0) {
+    normalizePath(existing[1], winslash = "/", mustWork = TRUE)
+  } else {
+    NA_character_
+  }
 }
 
 customer_csv_candidates <- c(
@@ -104,7 +116,10 @@ tx_csv_candidates <- c(
   file.path("..", "data", "transactions_data.csv")
 )
 
-data_bundle <- build_base_data_from_csv(customer_csv_candidates, tx_csv_candidates)
+customer_path <- find_existing_path(customer_csv_candidates)
+tx_path <- find_existing_path(tx_csv_candidates)
+
+data_bundle <- build_base_data_from_csv(customer_path, tx_path)
 
 saveRDS(
   list(base_data = data_bundle$base_data),

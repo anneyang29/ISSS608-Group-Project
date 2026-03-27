@@ -42,7 +42,6 @@ if (!is.na(base_data_path)) {
   data_bundle <- readRDS(base_data_path)
   base_data <- data_bundle$base_data
   
-  # do NOT load time_data at app startup
   time_data <- NULL
   
 } else {
@@ -113,30 +112,6 @@ morandi_colors <- c(
 #====================================================
 
 header <- dashboardHeader(title = " Colombian Fintech Financial Analytics")
-
-# sidebar <- dashboardSidebar(
-#   sidebarMenu(
-#     width = 100,
-#     selected = "Clustering",
-#     menuItem(
-#       "Home",
-#       icon = icon("home"),
-#       href = "https://anneyang29.github.io/ISSS608-Group-Project/",
-#       newtab = TRUE
-#     ),
-#     menuItem("Clustering Analysis", tabName = "Clustering", icon = icon("users")),
-#     menuItem("Confirmatory Analysis", tabName = "Confirmatory", icon = icon("chart-bar")),
-#     menuItem("Time-Oriented Data Analysis", tabName = "Time", icon = icon("chart-line"),
-#              menuSubItem("Dashboard", tabName = "Time_Dashboard"),
-#              menuSubItem("Cashflow Analysis", tabName = "Time_Cashflow"))
-#   )
-# )
-
-# mytheme <- create_theme(
-#  adminlte_color(light_blue = "#D4C5B9"),
-#  adminlte_sidebar(width = "250px", dark_bg = "#2E3440", dark_hover_bg = "#D4C5B9", dark_color = "#FFFFFF"),
-#  adminlte_global(content_bg = "#F8F9FA", box_bg = "#FFFFFF", info_box_bg = "#FFFFFF")
-# )
 
 #====================================================
 # CLUSTERING UI - START
@@ -395,7 +370,7 @@ customer_types <-  c("Gender" = "gender",
                      "Income Bracket" = "income_bracket")
 
 time_dashboard_filters <- sidebar(
-  title = h3("Dashboard Filters"),
+  title = h4("Dashboard Filters"),
   bg = "lightgrey",
   uiOutput("time_tx_type_ui"),
   dateRangeInput("time_date_range", "Transaction Date Range",
@@ -408,8 +383,8 @@ time_dashboard_filters <- sidebar(
 time_key_stats <- layout_column_wrap(
   fill = TRUE,
   value_box(
-    title = "TOP TX MONTH.",
-    value = textOutput("stat_top_month"),
+    title = "TOP TX MONTH.", 
+    value = withSpinner(textOutput("stat_top_month"), type = 7, size=0.5, color="white", proxy.height = "50px"),
     showcase = icon("calendar"),
     theme = "primary",
     showcase_layout = "top right", 
@@ -417,7 +392,7 @@ time_key_stats <- layout_column_wrap(
   ),
   value_box(
     title = "NEW CUSTOMERS",
-    value = textOutput("stat_new_cust"),
+    value = withSpinner(textOutput("stat_new_cust"), type = 7, size=0.5, color="black", proxy.height = "50px"),
     showcase = icon("user-plus"),
     theme = "info",
     showcase_layout = "top right", 
@@ -425,7 +400,7 @@ time_key_stats <- layout_column_wrap(
   ),
   value_box(
     title = "M-O-M TX CHANGE",
-    value = textOutput("stat_tx_change"),
+    value = withSpinner(textOutput("stat_tx_change"), type = 7, size=0.5, color="black", proxy.height = "50px"),
     showcase = icon("chart-line"),
     theme = "success",
     showcase_layout = "top right", 
@@ -433,7 +408,7 @@ time_key_stats <- layout_column_wrap(
   ),
   value_box(
     title = "TOTAL CUSTOMERS",
-    value = textOutput("stat_total_cust"),
+    value = withSpinner(textOutput("stat_total_cust"), type = 7, size=0.5, color="black", proxy.height = "50px"),
     showcase = icon("users-viewfinder"),
     theme = "warning",
     showcase_layout = "top right", 
@@ -540,14 +515,79 @@ Dashboard <- page_fluid(
                   )
   ))
 
+ca_filters <- sidebar(
+  title = h4("Filters"),
+  bg = "lightgrey",
 
-CashflowSubTabs <- tabsetPanel(
-  id = "CashflowSubTabs",
-  tabPanel("Historical Cashflow Analysis", 
-           h2("Title")),
-  tabPanel("Future Cashflow Prediction", 
-           h2("Title2"))
+  # Global filters stay at the top
+  dateRangeInput("cashflow_date_range", "Transactions Date Range",
+                 start = "2023-01-01", end = "2023-12-31", format = "yyyy-mm-dd"),
+  
+  selectInput("cashflow_locations", "Locations",
+              choices = c("All", "Armenia, Quindío", "Barranquilla, Atlántico",    
+                          "Bogotá, Cundinamarca", "Bucaramanga, Santander",      
+                          "Cali, Valle del Cauca", "Cartagena, Bolívar", 
+                          "Cúcuta, Norte de Santander",  "Ibagué, Tolima",              
+                          "Manizales, Caldas", "Medellín, Antioquia",        
+                          "Montería, Córdoba", "Neiva, Huila",            
+                          "Pasto, Nariño", "Pereira, Risaralda",         
+                          "Santa Marta, Magdalena", "Sincelejo, Sucre", 
+                          "Valledupar, Cesar", "Villavicencio, Meta")),
+  
+  # Accordion sections for specific chart settings
+  accordion(
+    open = FALSE, # Set to TRUE if you want them open by default
+    
+    accordion_panel(
+      title = "Cashflow Trend filters",
+      icon = bs_icon("graph-up"),
+      bg = "lightgrey",
+      radioButtons("cashflow_time_metric", "Time Aggregation",
+                   choices = c("Daily", "Weekly"), selected = "Weekly")
+    ),
+    
+    accordion_panel(
+      title = "Customer Breakdown filters",
+      icon = bs_icon("bar-chart"),
+      bg = "lightgrey",
+      selectInput("barchart_segment", "Customer Segment", 
+                  choices = customer_types), 
+      selectInput("barchart_metric", "Metric to Display", 
+                  choices = c("Total Amount" = "tx_amt", 
+                              "Transaction Count" = "tx_count", 
+                              "Unique Users" = "user_count")),
+      radioButtons("barchart_view", "Chart View", 
+                   choices = c("Stacked Amount" = "amt", 
+                               "Percentage Fill" = "percent"))
+    )
+  )
 )
+
+
+cashflow_trend <- card(
+  card_header("Cashflow Trend"),
+  withSpinner(plotlyOutput("cashflow_linegraph"))
+)
+
+customer_breakdown <- card(
+  card_header("Customer Breakdown"),
+  withSpinner(plotlyOutput("cashflow_barchart"))
+  )
+
+CashflowAnalysis <- page_fluid(
+  layout_sidebar(
+    sidebar = ca_filters,
+    layout_columns(col_widths = c(6,6),
+                  cashflow_trend,
+                  customer_breakdown)
+    ))
+
+CashflowSubTabs <- navset_card_tab(
+  id = "CashflowSubTabs",
+  nav_panel("Historical Cashflow Analysis", CashflowAnalysis),
+  nav_panel("Future Cashflow Prediction", "Content for Tab 2"),
+)
+
 
 #==========================================
 # Body Layout
@@ -585,7 +625,7 @@ ui <- page_navbar(
     nav_panel("Transactions Dashboard", Dashboard),
     nav_panel("Cashflow Analysis", CashflowSubTabs)
   ),
-  tags$div(
+  footer = tags$div(
     style = "margin: 10px; padding: 10px 12px; background: #F8F9FA; border-left: 4px solid #D4C5B9;",
     HTML( paste0(
       "<b>Data note:</b> This dashboard uses the COFINFAD customer + transaction data provided for the project. ",
@@ -609,12 +649,15 @@ server <- function(input, output, session) {
         stop("shiny_time_data.rds not found.", call. = FALSE)
       }
       
-      message("Loading time_data from: ", time_data_path)
+      id <- showNotification("Initializing transaction data...", duration = NULL, closeButton = FALSE)
+      on.exit(removeNotification(id), add = TRUE)
+      
+      message("Loading data from: ", time_data_path)
       td <- readRDS(time_data_path)$time_data
       time_data_rv(td)
     }
-    
-    time_data_rv()
+
+    return(time_data_rv())
   }
   
   output$time_tx_type_ui <- renderUI({
@@ -627,28 +670,33 @@ server <- function(input, output, session) {
     )
   })
   
-  raw_filtered_data <- reactive({
-    req(input$time_tx_type, input$time_date_range, input$time_cus_seg, input$time_selected_seg)
+  raw_filtered_data <- reactive( {
+    # Use default values if inputs are NULL (initial load)
+    tx_type  <- if(is.null(input$time_tx_type)) "All" else input$time_tx_type
+    date_rng <- if(is.null(input$time_date_range)) c("2023-01-01", "2023-12-31") else input$time_date_range
+    cus_seg  <- if(is.null(input$time_cus_seg)) "gender" else input$time_cus_seg
     
     td <- load_time_data()
     dt <- as.data.table(td)
     
-    res <- dt[date >= as.Date(input$time_date_range[1]) &
-                date <= as.Date(input$time_date_range[2])]
+    # Filter by Date
+    res <- dt[date >= as.Date(date_rng[1]) & date <= as.Date(date_rng[2])]
     
-    if (input$time_tx_type != "All") {
-      res <- res[type == input$time_tx_type]
+    # Filter by Type
+    if (tx_type != "All") {
+      res <- res[type == tx_type]
     }
     
-    col_name <- input$time_cus_seg
-    res <- res[res[[col_name]] %in% input$time_selected_seg]
+    # Handle Segments Fallback
+    if (is.null(input$time_selected_seg) || length(input$time_selected_seg) == 0) {
+      selected_vals <- unique(dt[[cus_seg]])
+    } else {
+      selected_vals <- input$time_selected_seg
+    }
     
+    res <- res[res[[cus_seg]] %in% selected_vals]
     droplevels(as.data.frame(res))
   })
-  
-  confirmed_method <- eventReactive(input$confirm_method, {
-    input$clust_method
-  }, ignoreInit = FALSE)
   
   # --- STEP 1: Correlation Logic ---
   output$corr_warning <- renderUI({
@@ -1466,7 +1514,7 @@ server <- function(input, output, session) {
   }, striped = TRUE, bordered = TRUE, spacing = "s", width = "100%")
   
   
-  # --- TIME ANALYSIS : DASHBOARD ---
+  # --- TIME ANALYSIS  ---
   
   # -- 1.1 DASHBOARD FILTERS -- 
   
@@ -1504,15 +1552,17 @@ server <- function(input, output, session) {
   observeEvent(input$time_selected_seg, {
     current <- input$time_selected_seg
     
-    if (is.null(current) || length(current) == 0) {
+    # Check if current is actually NULL or empty
+    # AND only trigger if the tracker prev_valid_sel actually has data
+    if (length(prev_valid_sel()) > 0 && (is.null(current) || length(current) == 0)) {
       # Revert to previous valid selection
       updateCheckboxGroupInput(session, "time_selected_seg", selected = prev_valid_sel())
       showNotification("At least one segment must be selected.", type = "warning", duration = 2)
-    } else {
+    } else if (!is.null(current) && length(current) > 0) {
       # Update the tracker with the valid selection
       prev_valid_sel(current)
     }
-  }, ignoreNULL = FALSE)
+  }, ignoreNULL = TRUE)
   
   # Apply a 400ms delay after user clicks checkboxes before app recalculates
   dashboard_data <- raw_filtered_data %>% debounce(400)
@@ -1662,7 +1712,77 @@ server <- function(input, output, session) {
       twindow=input$stl_trend_window
     )
   })
-
+  
+  # -- 2.1 CASHFLOW ANALYSIS -- 
+  
+  ca_raw_data <- reactive({
+    # Provide startup defaults
+    date_rng <- if(is.null(input$cashflow_date_range)) c("2023-01-01", "2023-12-31") else input$cashflow_date_range
+    loc_val  <- if(is.null(input$cashflow_locations)) "All" else input$cashflow_locations
+    
+    td <- load_time_data()
+    dt <- as.data.table(td)
+    
+    res <- dt[date >= as.Date(date_rng[1]) & date <= as.Date(date_rng[2])]
+    
+    if (!"All" %in% loc_val) {
+      res <- res[location %in% loc_val]
+    }
+    
+    droplevels(as.data.frame(res))
+  })
+  
+  liquidity_data <- reactive({
+    req(input$cashflow_date_range, input$cashflow_locations, input$cashflow_time_metric)
+    
+    get_liquidity_data(
+      data = ca_raw_data(), 
+      location_value = input$cashflow_locations, 
+      start_date = input$cashflow_date_range[1], 
+      end_date = input$cashflow_date_range[2], 
+      time_metric = input$cashflow_time_metric
+    )
+  })
+  
+  # --- 2.2 CASHFLOW TREND ---
+  
+  output$cashflow_linegraph <- renderPlotly({
+    plot_data <- liquidity_data()
+    
+    linegraph<- get_cashflow_graph(plot_data)
+    
+    ggplotly(linegraph, tooltip = "text") %>%
+      layout(legend = list(orientation = "h", x = 0.5, xanchor = "center", y = -0.2))
+  })
+  
+  # --- 2.3 CUSTOMER BREAKDOWN ---
+  
+  cust_breakdown_data <- reactive({
+    req(input$cashflow_date_range, input$cashflow_locations, input$barchart_segment)
+    
+    get_liquidity_cust_data(
+      data = ca_raw_data(), 
+      location_value = input$cashflow_locations, 
+      start_date = input$cashflow_date_range[1], 
+      end_date = input$cashflow_date_range[2], 
+      selected_type = input$barchart_segment
+    )
+  })
+  
+  # Render the Bar Chart
+  output$cashflow_barchart <- renderPlotly({
+    # Fetch the reactive data
+    plot_data <- cust_breakdown_data()
+    
+    # Generate the graph using your helper function and UI inputs
+    barcharts<- get_barcharts(
+      data = plot_data, 
+      selected_type = input$barchart_segment, 
+      metric = input$barchart_metric, 
+      viewtype = input$barchart_view
+    )
+    ggplotly(barcharts, tooltip = "text")
+  })
 }
 
 #====================================================
