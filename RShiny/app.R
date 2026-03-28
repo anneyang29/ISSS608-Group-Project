@@ -374,10 +374,15 @@ ClusterSubTabs <- navset_card_tab(
 
 ConfirmRow1 <- fluidRow(
   column(3,
-         card(title = "H1 Settings", status = "info", solidHeader = FALSE, width = NULL,
-             selectInput("h1_outcome", "Outcome (numeric):", choices = confirm_numeric_vars, selected = h1_outcome_default),
-             selectInput("h1_predictor", "Predictor (numeric):", choices = confirm_numeric_vars, selected = h1_predictor_default),
-             uiOutput("h1_input_warning")
+         tags$div(
+           class = "confirmatory-sticky-sidebar",
+           card(title = "H1 Settings", status = "info", solidHeader = FALSE, width = NULL,
+               selectizeInput("h1_outcome", "Outcome (numeric):", choices = confirm_numeric_vars, selected = h1_outcome_default,
+                              options = list(dropdownParent = "body")),
+               selectizeInput("h1_predictor", "Predictor (numeric):", choices = confirm_numeric_vars, selected = h1_predictor_default,
+                              options = list(dropdownParent = "body")),
+               uiOutput("h1_input_warning")
+           )
          )
   ),
   column(9,
@@ -418,34 +423,42 @@ ConfirmRow1 <- fluidRow(
 
 ConfirmRow2 <- fluidRow(
   column(3,
-         card(title = "H2 Settings", status = "info", solidHeader = FALSE, width = NULL,
-             selectInput("h2_group", "Group variable:", choices = confirm_categorical_vars, selected = h2_group_default),
-             selectInput("h2_value", "Value (numeric):", choices = confirm_numeric_vars, selected = h2_value_default),
-             selectInput(
-               "h2_test_type",
-               "Test type:",
-               choices = c(
-                 "Auto (recommended)" = "auto",
-                 "Parametric (ANOVA/Welch)" = "parametric",
-                 "Non-parametric (Kruskal-Wallis)" = "nonparametric"
+         tags$div(
+           class = "confirmatory-sticky-sidebar",
+           card(title = "H2 Settings", status = "info", solidHeader = FALSE, width = NULL,
+               selectizeInput("h2_group", "Group variable:", choices = confirm_categorical_vars, selected = h2_group_default,
+                              options = list(dropdownParent = "body")),
+               selectizeInput("h2_value", "Value (numeric):", choices = confirm_numeric_vars, selected = h2_value_default,
+                              options = list(dropdownParent = "body")),
+               selectizeInput(
+                 "h2_test_type",
+                 "Test type:",
+                 choices = c(
+                   "Auto (recommended)" = "auto",
+                   "Parametric (ANOVA/Welch)" = "parametric",
+                   "Non-parametric (Kruskal-Wallis)" = "nonparametric"
+                 ),
+                 selected = "auto",
+                 options = list(dropdownParent = "body")
                ),
-               selected = "auto"
-             ),
-             selectInput(
-               "h2_pairwise_display",
-               "Pairwise display:",
-               choices = c(
-                 "Significant only" = "significant",
-                 "All" = "all"
+               selectizeInput(
+                 "h2_pairwise_display",
+                 "Pairwise display:",
+                 choices = c(
+                   "Significant only" = "significant",
+                   "All" = "all"
+                 ),
+                 selected = "significant",
+                 options = list(dropdownParent = "body")
                ),
-               selected = "significant"
-             ),
-             selectInput(
-               "h2_p_adjust",
-               "P-value adjustment method:",
-               choices = p.adjust.methods,
-               selected = "BH"
-             )
+               selectizeInput(
+                 "h2_p_adjust",
+                 "P-value adjustment method:",
+                 choices = p.adjust.methods,
+                 selected = "BH",
+                 options = list(dropdownParent = "body")
+               )
+           )
          )
   ),
   column(9,
@@ -478,9 +491,12 @@ ConfirmRow2 <- fluidRow(
   )
 )
 
-ConfirmSubTabs <- tabsetPanel(
-  tabPanel("Regression", ConfirmRow1),
-  tabPanel("ANOVA", ConfirmRow2)
+ConfirmSubTabs <- tags$div(
+  class = "confirmatory-shell",
+  tabsetPanel(
+    tabPanel("Regression", ConfirmRow1),
+    tabPanel("ANOVA", ConfirmRow2)
+  )
 )
 
 #==========================================
@@ -673,9 +689,31 @@ lux_morandi_theme <- bs_theme(
   "navbar-light-hover-color" = "#A8B7AB"   # Morandi Sage for hover
 )
 
+app_ui_overrides <- tags$head(
+  tags$style(HTML("\n    .navbar-brand {\n      font-size: 1.1rem;\n      font-weight: 700;\n      line-height: 1.2;\n    }\n\n    .navbar-nav .nav-link {\n      font-size: 0.98rem;\n    }\n\n    .bslib-page-navbar .container-fluid {\n      padding-left: 1.25rem;\n      padding-right: 1.25rem;\n    }\n\n    .bslib-page-navbar .card,\n    .bslib-page-navbar .value-box,\n    .bslib-page-navbar .sidebar {\n      margin-bottom: 1rem;\n    }\n\n    .bslib-page-navbar .card-header {\n      font-size: 1rem;\n      padding: 0.85rem 1rem;\n    }\n\n    .bslib-page-navbar .card-body,\n    .bslib-page-navbar .sidebar-content,\n    .bslib-page-navbar .form-label,\n    .bslib-page-navbar .form-control,\n    .bslib-page-navbar .selectize-input,\n    .bslib-page-navbar .btn {\n      font-size: 0.95rem;\n    }\n\n    .bslib-page-navbar .card-body {\n      padding: 1rem;\n    }\n\n    .bslib-page-navbar .tab-content > .tab-pane {\n      padding-top: 0.5rem;\n    }\n\n    .confirmatory-shell > .tabbable > .nav,\n    .confirmatory-shell > .nav {\n      position: sticky;\n      top: 0;\n      z-index: 20;\n      padding-top: 0.25rem;\n      padding-bottom: 0.35rem;\n      background: rgba(255, 255, 255, 0.96);\n      backdrop-filter: blur(6px);\n    }\n\n    .confirmatory-sticky-sidebar {\n      position: sticky;\n      top: 3.5rem;\n      z-index: 10;\n      align-self: flex-start;\n    }\n\n    .confirmatory-sticky-sidebar,\n    .confirmatory-sticky-sidebar .card,\n    .confirmatory-sticky-sidebar .card-body {\n      overflow: visible;\n    }\n\n    .popover,\n    .dropdown-menu,\n    .selectize-dropdown,\n    .selectize-dropdown-content {\n      z-index: 1080 !important;\n    }\n\n    .app-data-note-wrap {\n      display: flex;\n      justify-content: flex-end;\n      padding: 0 1.25rem 0.85rem;\n    }\n\n    .app-data-note {\n      max-width: 540px;\n      color: #6C757D;\n      font-size: 0.78rem;\n      line-height: 1.45;\n      text-align: right;\n    }\n\n    .app-data-note summary {\n      cursor: pointer;\n      list-style: none;\n      font-size: 0.76rem;\n      font-weight: 600;\n      color: #7E8B92;\n    }\n\n    .app-data-note summary::-webkit-details-marker {\n      display: none;\n    }\n\n    .app-data-note summary:hover {\n      color: #2E3440;\n    }\n\n    .app-data-note-content {\n      margin-top: 0.35rem;\n      padding-top: 0.35rem;\n      border-top: 1px solid #E5E7EB;\n    }\n\n    @media (max-width: 991.98px) {\n      .confirmatory-shell > .tabbable > .nav,\n      .confirmatory-shell > .nav,\n      .confirmatory-sticky-sidebar {\n        position: static;\n      }\n    }\n  "))
+)
+
+data_note_ui <- tags$div(
+  class = "app-data-note-wrap",
+  tags$details(
+    class = "app-data-note",
+    tags$summary("Data note"),
+    tags$div(
+      class = "app-data-note-content",
+      HTML(paste0(
+        "This dashboard uses the COFINFAD customer + transaction data provided for the project. ",
+        "Several behavioural metrics (e.g., transaction frequency/volume features) are engineered from the raw transactions and stored in a prepared dataset (<i>shiny_base_data.rds</i>) for faster loading. ",
+        "If the RDS is not found, the app will build it from the CSVs once. ",
+        "The app does not generate new labels such as churn probability; it analyses the fields provided in the dataset."
+      ))
+    )
+  )
+)
+
 ui <- page_navbar(
   title = HTML("Colombian Fintech <br> Financial Analytics"),
   theme = lux_morandi_theme,
+  header = app_ui_overrides,
   
   nav_item(tags$a("Home",
                   href = "https://anneyang29.github.io/ISSS608-Group-Project/",
@@ -689,15 +727,7 @@ ui <- page_navbar(
     nav_panel("Transactions Dashboard", Dashboard),
     nav_panel("Cashflow Analysis", CashflowSubTabs)
   ),
-  tags$div(
-    style = "margin: 10px; padding: 10px 12px; background: #F8F9FA; border-left: 4px solid #D4C5B9;",
-    HTML( paste0(
-      "<b>Data note:</b> This dashboard uses the COFINFAD customer + transaction data provided for the project. ",
-      "Several behavioural metrics (e.g., transaction frequency/volume features) are engineered from the raw transactions and stored in a prepared dataset (<i>shiny_base_data.rds</i>) for faster loading. ",
-      "If the RDS is not found, the app will build it from the CSVs once. ",
-      "The app does not generate new labels such as churn probability; it analyses the fields provided in the dataset."
-    ))
-  )
+  footer = data_note_ui
 )
 
 #====================================================
