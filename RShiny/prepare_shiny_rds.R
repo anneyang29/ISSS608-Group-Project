@@ -1,4 +1,4 @@
-library(tidyverse)
+library(arrow)
 
 build_base_data_from_csv <- function(customer_csv_path, tx_csv_path) {
   customer_raw <- readr::read_csv(customer_csv_path, show_col_types = FALSE) %>%
@@ -9,8 +9,8 @@ build_base_data_from_csv <- function(customer_csv_path, tx_csv_path) {
       customer_id = as.numeric(customer_id),
       date = as.Date(date),
       amount = as.numeric(amount),
-      type = as.character(type)
-    ) %>%
+      type = as.factor(type)
+      ) %>%
     dplyr::filter(!is.na(customer_id), !is.na(date), !is.na(amount), amount > 0)
   
   if (nrow(tx_clean) == 0) {
@@ -67,20 +67,21 @@ build_base_data_from_csv <- function(customer_csv_path, tx_csv_path) {
   
   cus_clean <- customer_raw %>%
     dplyr::mutate(
-      dplyr::across(
-        dplyr::all_of(intersect("customer_segment", names(.))),
-        ~ factor(.x, levels = c("inactive", "occasional", "regular", "power"))
-      ),
-      dplyr::across(
-        dplyr::all_of(intersect("clv_segment", names(.))),
-        ~ factor(.x, levels = c("Bronze", "Silver", "Gold", "Platinum"))
-      ),
-      dplyr::across(
-        dplyr::all_of(intersect("income_bracket", names(.))),
-        ~ factor(.x, levels = c("Low", "Medium", "High", "Very High"))
-      )
+      customer_segment = factor(customer_segment, 
+                                levels = c("inactive", "occasional", "regular", "power"), 
+                                ordered = TRUE),
+      clv_segment = factor(clv_segment, 
+                           levels = c("Bronze", "Silver", "Gold", "Platinum"), 
+                           ordered = TRUE),
+      income_bracket = factor(income_bracket, 
+                              levels = c("Low", "Medium", "High", "Very High"), 
+                              ordered = TRUE),
+      # Factorize nominal columns here for time_data as well
+      gender = as.factor(gender),
+      acquisition_channel = as.factor(acquisition_channel),
+      location = as.factor(location)
     ) %>%
-    select(customer_id, gender,acquisition_channel, customer_segment,
+    select(customer_id, gender, acquisition_channel, customer_segment,
            location, clv_segment, income_bracket, first_tx)
   
   time_data <- tx_clean %>%
@@ -126,10 +127,8 @@ saveRDS(
   "RShiny/data/shiny_base_data_light.rds"
 )
 
-saveRDS(
-  list(time_data = data_bundle$time_data),
-  "RShiny/data/shiny_time_data.rds"
-)
+write_parquet(data_bundle$time_data, 
+              "RShiny/data/shiny_time_data.parquet")
 
 cat("Done: created shiny_base_data_light.rds and shiny_time_data.rds\n")
 

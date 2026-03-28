@@ -42,8 +42,9 @@ if (!is.na(base_data_path)) {
   data_bundle <- readRDS(base_data_path)
   base_data <- data_bundle$base_data
   
-  time_data <- NULL
-  
+  rm(data_bundle)
+  gc()
+
 } else {
   stop(
     "shiny_base_data_light.rds not found. Please deploy the prebuilt light RDS file with the app.",
@@ -372,7 +373,12 @@ customer_types <-  c("Gender" = "gender",
 time_dashboard_filters <- sidebar(
   title = h4("Dashboard Filters"),
   bg = "lightgrey",
-  uiOutput("time_tx_type_ui"),
+  radioButtons(
+    "time_tx_type",
+    "Transaction type",
+    choices = c("All", "Deposit", "Payment", "Withdrawal", "Transfer"),
+    selected = "All"
+  ),
   dateRangeInput("time_date_range", "Transaction Date Range",
                  start = "2023-01-01", end = "2023-12-31", format = "yyyy-mm-dd"),
   selectInput("time_cus_seg", "Segment Customers by", choices = customer_types),
@@ -601,8 +607,6 @@ lux_morandi_theme <- bs_theme(
   info = "#D4C5B9",            # Morandi Sand
   warning = "#C6B48F",         # Morandi Gold
   danger = "#C3A6A0",          # Morandi Rose
-  base_font = font_google("Nunito Sans"),
-  heading_font = font_google("Quicksand"),
   "navbar-bg" = "#2E3440",
   "navbar-light-color" = "#FFFFFF",
   "navbar-light-active-color" = "#D4C5B9", # Morandi Sand for the active tab
@@ -617,23 +621,13 @@ ui <- page_navbar(
                   href = "https://anneyang29.github.io/ISSS608-Group-Project/",
                   target = "_blank"
                     )),
-  nav_panel("Clustering Analysis", ClusterSubTabs),
-  nav_panel("Confirmatory Analysis", ConfirmSubTabs),
-  
   nav_menu(
     "Time-Oriented Data Analysis",
     nav_panel("Transactions Dashboard", Dashboard),
     nav_panel("Cashflow Analysis", CashflowSubTabs)
   ),
-  footer = tags$div(
-    style = "margin: 10px; padding: 10px 12px; background: #F8F9FA; border-left: 4px solid #D4C5B9;",
-    HTML( paste0(
-      "<b>Data note:</b> This dashboard uses the COFINFAD customer + transaction data provided for the project. ",
-      "Several behavioural metrics (e.g., transaction frequency/volume features) are engineered from the raw transactions and stored in a prepared dataset (<i>shiny_base_data.rds</i>) for faster loading. ",
-      "If the RDS is not found, the app will build it from the CSVs once. ",
-      "The app does not generate new labels such as churn probability; it analyses the fields provided in the dataset."
-    ))
-  )
+  nav_panel("Clustering Analysis", ClusterSubTabs),
+  nav_panel("Confirmatory Analysis", ConfirmSubTabs)
 )
 
 #====================================================
@@ -641,33 +635,49 @@ ui <- page_navbar(
 #====================================================
 server <- function(input, output, session) { 
   
-  time_data_rv <- reactiveVal(NULL)
+  gc()
   
   load_time_data <- function() {
-    if (is.null(time_data_rv())) {
-      if (is.na(time_data_path)) {
-        stop("shiny_time_data.rds not found.", call. = FALSE)
-      }
-      
-      id <- showNotification("Initializing transaction data...", duration = NULL, closeButton = FALSE)
-      on.exit(removeNotification(id), add = TRUE)
-      
-      message("Loading data from: ", time_data_path)
-      td <- readRDS(time_data_path)$time_data
-      time_data_rv(td)
-    }
-
-    return(time_data_rv())
+    # This does NOT load the data into RAM. 
+    # It just scans the metadata of the Parquet file.
+    arrow::open_dataset("data/shiny_time_data.parquet")
   }
   
-  output$time_tx_type_ui <- renderUI({
-    td <- load_time_data()
-    radioButtons(
-      "time_tx_type",
-      "Transaction type",
-      choices = c("All", sort(unique(td$type))),
-      selected = "All"
-    )
+  raw_filtered_data <- reactive({
+    # Startup defaults to prevent "empty" initial render
+    tx_type  <- if(is.null(input$time_tx_type)) "All" else input$time_tx_type
+    date_rng <- if(is.null(input$time_date_range)) c("2023-01-01", "2023-12-31") else input$time_date_range
+    cus_seg  <- if(is.null(input$time_cus_seg)) "gender" else input$time_cus_seg
+    
+    # 1. "Point" to the Parquet file
+    ds <- load_time_data()
+    
+    # 2. Apply filters (this happens on disk, not in RAM)
+    res_query <- ds %>%
+      filter(date >= as.Date(date_rng[1]), 
+             date <= as.Date(date_rng[2]))
+    
+    if (tx_type != "All") {
+      res_query <- res_query %>% filter(type == tx_type)
+    }
+    
+    # 3. Pull the filtered data into RAM
+    # Only the rows matching your dates/type are loaded now
+    res <- res_query %>% collect()
+    
+    # 4. Apply the segment filter (easier to do in R after collect)
+    # Handle initial load if segment input isn't ready
+    current_selection <- input$time_selected_seg
+    if (is.null(current_selection) || length(current_selection) == 0) {
+      current_selection <- unique(res[[cus_seg]])
+    }
+    
+    res <- res %>% 
+      filter(.data[[cus_seg]] %in% current_selection) %>%
+      droplevels()
+    
+    gc()
+    return(res)
   })
   
   raw_filtered_data <- reactive( {
@@ -1716,20 +1726,27 @@ server <- function(input, output, session) {
   # -- 2.1 CASHFLOW ANALYSIS -- 
   
   ca_raw_data <- reactive({
-    # Provide startup defaults
+    # Startup defaults
     date_rng <- if(is.null(input$cashflow_date_range)) c("2023-01-01", "2023-12-31") else input$cashflow_date_range
     loc_val  <- if(is.null(input$cashflow_locations)) "All" else input$cashflow_locations
     
-    td <- load_time_data()
-    dt <- as.data.table(td)
+    # 1. Point to Parquet
+    ds <- load_time_data()
     
-    res <- dt[date >= as.Date(date_rng[1]) & date <= as.Date(date_rng[2])]
+    # 2. Build the query
+    res_query <- ds %>%
+      filter(date >= as.Date(date_rng[1]), 
+             date <= as.Date(date_rng[2]))
     
     if (!"All" %in% loc_val) {
-      res <- res[location %in% loc_val]
+      res_query <- res_query %>% filter(location %in% loc_val)
     }
     
-    droplevels(as.data.frame(res))
+    # 3. Collect only the required rows into RAM
+    res <- res_query %>% collect()
+    
+    gc()
+    return(droplevels(res))
   })
   
   liquidity_data <- reactive({
