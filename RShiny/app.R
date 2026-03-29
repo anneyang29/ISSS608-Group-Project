@@ -408,7 +408,7 @@ time_dashboard_filters <- sidebar(
     selected = "All"
   ),
   dateRangeInput("time_date_range", "Transactions Date Range",
-                 start = "2023-01-01", end = "2023-06-30", 
+                 start = "2023-01-01", end = "2023-04-30", 
                  min = "2023-01-01", max = "2023-12-31", 
                  format = "yyyy-mm-dd",
                  startview = "year"),
@@ -569,7 +569,7 @@ ca_filters <- sidebar(
 
   # Global filters stay at the top
   dateRangeInput("cashflow_date_range", "Transactions Date Range",
-                 min = "2023-01-01", max = "2023-12-31",
+                 min = "2023-01-01", max = "2023-3-31",
                  start = "2023-01-01", end = "2023-06-30",
                  format = "yyyy-mm-dd",
                  startview="year"),
@@ -792,6 +792,10 @@ ui <- page_navbar(
 server <- function(input, output, session) { 
   
   gc()
+  
+  confirmed_method <- eventReactive(input$confirm_method, {
+    input$clust_method
+  }, ignoreInit = FALSE)
 
   # --- STEP 1: Correlation Logic ---
   output$corr_warning <- renderUI({
@@ -1682,11 +1686,11 @@ server <- function(input, output, session) {
     # Calculate the difference in days
     days_diff <- as.numeric(difftime(input$time_date_range[2], input$time_date_range[1], units = "days"))
     
-    # If range is > 186 days (~6 months), show warning and STOP execution
-    if (days_diff > 186) {
+    # If range is > 123 days (~4 months), show warning and STOP execution
+    if (days_diff > 123) {
       showModal(modalDialog(
         title = span(icon("circle-exclamation"), "Date Range Too Large", style = "color: #e74c3c;"),
-        "You have selected more than 6 months of data. 
+        "You have selected more than 4 months of data. 
        Please shorten your date range to ensure the server can process your request without crashing.",
         footer = modalButton("Close"),
         easyClose = TRUE
@@ -1876,11 +1880,11 @@ server <- function(input, output, session) {
     
     days_diff <- as.numeric(difftime(input$cashflow_date_range[2], input$cashflow_date_range[1], units = "days"))
     
-    # If range is > 186 days (~6 months), show warning and STOP execution
-    if (days_diff > 186) {
+    # If range is > 93 days (~3 months), show warning and STOP execution
+    if (days_diff > 93) {
       showModal(modalDialog(
         title = span(icon("circle-exclamation"), "Date Range Too Large", style = "color: #e74c3c;"),
-        "You have selected more than 6 months of data. 
+        "You have selected more than 3 months of data. 
        Please shorten your date range to ensure the server can process your request without crashing.",
         footer = modalButton("Close"),
         easyClose = TRUE

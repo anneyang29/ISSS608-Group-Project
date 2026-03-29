@@ -81,7 +81,7 @@ build_base_data_from_csv <- function(customer_csv_path, tx_csv_path) {
       location = as.factor(location)
     ) %>%
     select(customer_id, gender, acquisition_channel, customer_segment,
-           location, clv_segment, income_bracket)
+           location, clv_segment, income_bracket, first_tx)
   
   weekly_tx <- tx_clean%>%
     mutate(date = floor_date(date, unit = "week", week_start = 1)) %>%
