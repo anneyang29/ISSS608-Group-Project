@@ -4,7 +4,7 @@
 
 # load R packages
 #====================================================
-pacman::p_load(shiny, shinydashboard, shinycssloaders, 
+pacman::p_load(shiny, shinydashboard, shinybusy, shinycssloaders,
                tidyverse, dplyr, readr, ggcorrplot, parallelPlot, 
                cluster, mclust, fresh, bslib, bsicons,  tsibble, fable, 
                feasts, tidymodels, timetk, 
@@ -373,51 +373,55 @@ customer_types <-  c("Gender" = "gender",
 time_dashboard_filters <- sidebar(
   title = h4("Dashboard Filters"),
   bg = "lightgrey",
-  radioButtons(
+  selectInput(
     "time_tx_type",
     "Transaction type",
     choices = c("All", "Deposit", "Payment", "Withdrawal", "Transfer"),
     selected = "All"
   ),
-  dateRangeInput("time_date_range", "Transaction Date Range",
-                 start = "2023-01-01", end = "2023-12-31", format = "yyyy-mm-dd"),
+  dateRangeInput("time_date_range", "Transactions Date Range",
+                 start = "2023-01-01", end = "2023-12-31", 
+                 format = "yyyy-mm-dd",
+                 startview = "year"),
   selectInput("time_cus_seg", "Segment Customers by", choices = customer_types),
   checkboxGroupInput("time_selected_seg", "Select Segments:", choices = NULL),
-  actionLink("select_all_seg", "Select All / Reset", class = "btn btn-outline-primary btn-sm")
+  actionLink("select_all_seg", "Select All / Reset", class = "btn btn-outline-primary btn-sm"),
+  hr(), # Visual separator
+  actionButton("generate_btn", "Generate Dashboard", 
+               class = "btn-primary", 
+               icon = icon("play"),
+               width = "100%")
 )
   
 time_key_stats <- layout_column_wrap(
   fill = TRUE,
+  width=1,
   value_box(
+    width=2,
     title = "TOP TX MONTH.", 
     value = withSpinner(textOutput("stat_top_month"), type = 7, size=0.5, color="white", proxy.height = "50px"),
-    showcase = icon("calendar"),
     theme = "primary",
-    showcase_layout = "top right", 
     full_screen = FALSE
   ),
   value_box(
+    width=2,
     title = "NEW CUSTOMERS",
     value = withSpinner(textOutput("stat_new_cust"), type = 7, size=0.5, color="black", proxy.height = "50px"),
-    showcase = icon("user-plus"),
     theme = "info",
-    showcase_layout = "top right", 
     full_screen = FALSE
   ),
   value_box(
+    width=2,
     title = "M-O-M TX CHANGE",
     value = withSpinner(textOutput("stat_tx_change"), type = 7, size=0.5, color="black", proxy.height = "50px"),
-    showcase = icon("chart-line"),
     theme = "success",
-    showcase_layout = "top right", 
     full_screen = FALSE
   ),
   value_box(
+    width=2,
     title = "TOTAL CUSTOMERS",
     value = withSpinner(textOutput("stat_total_cust"), type = 7, size=0.5, color="black", proxy.height = "50px"),
-    showcase = icon("users-viewfinder"),
     theme = "warning",
-    showcase_layout = "top right", 
     full_screen = FALSE
   )
 )
@@ -437,6 +441,7 @@ bubble_plot <- card(
     )
   ),
   card_body(
+    padding = 0,
     withSpinner(plotlyOutput("animation_plot"))
     )
 )
@@ -465,8 +470,7 @@ cra_plot <- card(
 seasonal_analysis_card <- navset_card_pill(
   full_screen = TRUE,
   placement = "above",
-  
-  nav_panel("Cycle Plot",
+  nav_panel("Weekly Cycle Plot",
             card_body(
               popover(
                 bs_icon("funnel"),
@@ -477,7 +481,6 @@ seasonal_analysis_card <- navset_card_pill(
                                          "Unique Users" = "user_count")),
                 placement = "right"
               ),
-              # Set a fixed height to avoid the 'margins too large' error
               withSpinner(plotOutput("cycle_plot"))
             )
   ),
@@ -509,15 +512,19 @@ seasonal_analysis_card <- navset_card_pill(
 )
 
 Dashboard <- page_fluid(
+  add_busy_spinner(spin = "fading-circle", color = "#0275d8"),
   layout_sidebar(
     sidebar = time_dashboard_filters,
     layout_columns(col_widths = 12,
-                    time_key_stats,
-                    bubble_plot,
-                    layout_columns(
-                      col_widths = c(6,6),
-                      cra_plot,
-                      seasonal_analysis_card)
+                   layout_columns(
+                      col_widths=c(3,9),
+                      time_key_stats,
+                      bubble_plot,
+                      ),
+                   layout_columns(
+                     col_widths = c(6,6),
+                     cra_plot,
+                     seasonal_analysis_card)
                   )
   ))
 
@@ -543,15 +550,6 @@ ca_filters <- sidebar(
   # Accordion sections for specific chart settings
   accordion(
     open = FALSE, # Set to TRUE if you want them open by default
-    
-    accordion_panel(
-      title = "Cashflow Trend filters",
-      icon = bs_icon("graph-up"),
-      bg = "lightgrey",
-      radioButtons("cashflow_time_metric", "Time Aggregation",
-                   choices = c("Daily", "Weekly"), selected = "Weekly")
-    ),
-    
     accordion_panel(
       title = "Customer Breakdown filters",
       icon = bs_icon("bar-chart"),
@@ -566,6 +564,14 @@ ca_filters <- sidebar(
                    choices = c("Stacked Amount" = "amt", 
                                "Percentage Fill" = "percent"))
     )
+  ),
+  hr(),
+  actionButton(
+    inputId = "run_cashflow", 
+    label = "Show Analysis", 
+    icon = icon("play"), 
+    class = "btn-primary", 
+    width = "100%"
   )
 )
 
@@ -611,12 +617,47 @@ lux_morandi_theme <- bs_theme(
   "navbar-light-color" = "#FFFFFF",
   "navbar-light-active-color" = "#D4C5B9", # Morandi Sand for the active tab
   "navbar-light-hover-color" = "#A8B7AB"   # Morandi Sage for hover
-)
+)%>%
+  bs_add_variables(
+    "card-cap-bg" = "#F8F9FA", # Subtle grey for card headers
+    "card-border-radius" = "4px",
+    "btn-padding-y" = "0.25rem", # Smaller buttons
+    "btn-padding-x" = "0.5rem",
+    "font-size-base" = "0.875rem" # Global reduction
+  )
 
 ui <- page_navbar(
   title = HTML("Colombian Fintech <br> Financial Analytics"),
   theme = lux_morandi_theme,
-  
+  header = tags$head(
+    tags$style(HTML("
+      body { font-size: 0.85rem; }
+      .sidebar { font-size: 0.8rem; }
+      .control-label { font-size: 0.8rem; font-weight: bold; }
+      .card-header { font-size: 0.9rem !important; padding: 0.5rem 1rem !important; }
+      .bslib-value-box .value-box-title { font-size: 1rem !important; }
+      .bslib-value-box .value-box-value { font-size: 1.5rem !important; }
+      .bslib-column-wrap { gap: 10px !important; }
+      .navbar { 
+        min-height: 50px !important; 
+        padding-top: 0.2rem !important; 
+        padding-bottom: 0.2rem !important; 
+      }
+      .card-body {
+        display: flex !important;
+        flex-direction: column !important;
+        padding: 10px !important; /* Tighten internal spacing */
+      }
+      .shiny-spinner-placeholder {
+        display: flex;
+        align-items: center;
+      }
+      .js-plotly-plot, .plotly {
+        height: 100% !important;
+        width: 100% !important;
+      }
+    "))
+  ),
   nav_item(tags$a("Home",
                   href = "https://anneyang29.github.io/ISSS608-Group-Project/",
                   target = "_blank"
@@ -636,78 +677,7 @@ ui <- page_navbar(
 server <- function(input, output, session) { 
   
   gc()
-  
-  load_time_data <- function() {
-    # This does NOT load the data into RAM. 
-    # It just scans the metadata of the Parquet file.
-    arrow::open_dataset("data/shiny_time_data.parquet")
-  }
-  
-  raw_filtered_data <- reactive({
-    # Startup defaults to prevent "empty" initial render
-    tx_type  <- if(is.null(input$time_tx_type)) "All" else input$time_tx_type
-    date_rng <- if(is.null(input$time_date_range)) c("2023-01-01", "2023-12-31") else input$time_date_range
-    cus_seg  <- if(is.null(input$time_cus_seg)) "gender" else input$time_cus_seg
-    
-    # 1. "Point" to the Parquet file
-    ds <- load_time_data()
-    
-    # 2. Apply filters (this happens on disk, not in RAM)
-    res_query <- ds %>%
-      filter(date >= as.Date(date_rng[1]), 
-             date <= as.Date(date_rng[2]))
-    
-    if (tx_type != "All") {
-      res_query <- res_query %>% filter(type == tx_type)
-    }
-    
-    # 3. Pull the filtered data into RAM
-    # Only the rows matching your dates/type are loaded now
-    res <- res_query %>% collect()
-    
-    # 4. Apply the segment filter (easier to do in R after collect)
-    # Handle initial load if segment input isn't ready
-    current_selection <- input$time_selected_seg
-    if (is.null(current_selection) || length(current_selection) == 0) {
-      current_selection <- unique(res[[cus_seg]])
-    }
-    
-    res <- res %>% 
-      filter(.data[[cus_seg]] %in% current_selection) %>%
-      droplevels()
-    
-    gc()
-    return(res)
-  })
-  
-  raw_filtered_data <- reactive( {
-    # Use default values if inputs are NULL (initial load)
-    tx_type  <- if(is.null(input$time_tx_type)) "All" else input$time_tx_type
-    date_rng <- if(is.null(input$time_date_range)) c("2023-01-01", "2023-12-31") else input$time_date_range
-    cus_seg  <- if(is.null(input$time_cus_seg)) "gender" else input$time_cus_seg
-    
-    td <- load_time_data()
-    dt <- as.data.table(td)
-    
-    # Filter by Date
-    res <- dt[date >= as.Date(date_rng[1]) & date <= as.Date(date_rng[2])]
-    
-    # Filter by Type
-    if (tx_type != "All") {
-      res <- res[type == tx_type]
-    }
-    
-    # Handle Segments Fallback
-    if (is.null(input$time_selected_seg) || length(input$time_selected_seg) == 0) {
-      selected_vals <- unique(dt[[cus_seg]])
-    } else {
-      selected_vals <- input$time_selected_seg
-    }
-    
-    res <- res[res[[cus_seg]] %in% selected_vals]
-    droplevels(as.data.frame(res))
-  })
-  
+
   # --- STEP 1: Correlation Logic ---
   output$corr_warning <- renderUI({
     req(input$corr_vars)
@@ -1574,16 +1544,56 @@ server <- function(input, output, session) {
     }
   }, ignoreNULL = TRUE)
   
-  # Apply a 400ms delay after user clicks checkboxes before app recalculates
-  dashboard_data <- raw_filtered_data %>% debounce(400)
   
   # --- 1.2 KEY STATS ----
+  
+  load_time_data <- function() {
+    # This does NOT load the data into RAM. 
+    # It just scans the metadata of the Parquet file.
+    arrow::open_dataset("data/shiny_time_data.parquet")
+  }
+  
+  dashboard_data <- eventReactive(input$generate_btn, {
+    gc()
+    # 1. Grab inputs
+    tx_type  <- input$time_tx_type %||% "All"
+    cus_seg  <- input$time_cus_seg %||% "gender"
+    selected_vals <- input$time_selected_seg
+    start_d <- as.Date(input$time_date_range[1])
+    end_d <- lubridate::rollback(
+      lubridate::ceiling_date(as.Date(input$time_date_range[2]), "month") + months(1)
+    )
+    
+    # 2. Open Dataset
+    td <- load_time_data()
+    
+    # 3. Filter using arrow logic FIRST (fast, low RAM)
+    res_query <- td %>%
+      filter(date >= start_d, date <= end_d)
+    
+    if (tx_type != "All") {
+      res_query <- res_query %>% filter(type == tx_type)
+    }
+    
+    # 4. Pull into RAM only after filtering
+    res <- as.data.table(res_query)
+    
+    # 5. Final Segment Filter (easier in data.table/base)
+    if (!is.null(selected_vals) && length(selected_vals) > 0) {
+      res <- res[get(cus_seg) %in% selected_vals]
+    }
+    
+    gc()
+    
+    return(as.data.frame(res))
+  }, ignoreNULL = TRUE) # Do not pull data on startup
+  
   key_stats_data <- reactive({
     data <- dashboard_data()
     req(nrow(data)>0)
     list(
       top_month = get_top_month(data),
-      new_cust = get_new_cust(data, input$time_date_range[2]),
+      new_cust = get_new_cust(data, isolate(input$time_date_range[2])),
       change = get_tx_change(data),
       total = n_distinct(data$customer_id)
     )
@@ -1618,12 +1628,12 @@ server <- function(input, output, session) {
   
   # --- 1.3 BUBBLE PLOT ---
   animation_data_ready <- reactive({
-    req(dashboard_data(), input$time_cus_seg, input$time_granularity)
+    req(dashboard_data(), input$time_granularity)
     
     # Call your helper function
     get_animation_data(
       dashboard_data(), 
-      selected_type = input$time_cus_seg, 
+      selected_type = isolate(input$time_cus_seg),
       time_metric = input$time_granularity
     )
   })
@@ -1634,10 +1644,11 @@ server <- function(input, output, session) {
     df <- animation_data_ready()
     req(nrow(df) > 0, input$time_granularity)
     
-    plot<- get_bubble_plot(df, input$time_cus_seg, input$time_granularity)
+    plot<- get_bubble_plot(df, isolate(input$time_cus_seg), input$time_granularity)
     
     ggplotly(plot, tooltip="text")%>%
-      layout(autosize = TRUE)
+      layout(autosize = TRUE,
+             margin = list(l=0, r=0, b=0, t=30, pad=0)) 
   })
   
   # -- 1.4 CRA HEATMAP --
@@ -1646,21 +1657,21 @@ server <- function(input, output, session) {
     
     data <- dashboard_data()
     
-    choices <- data[[input$time_cus_seg]] %>% 
+    choices <- data[[isolate(input$time_cus_seg)]] %>% 
       unique() %>% 
       sort() %>% 
       stats::na.omit()
     
     radioButtons(
       inputId = "heatmap_specific_segment",
-      label = paste("Select", humanize_var(input$time_cus_seg), ":"),
+      label = paste("Select", humanize_var(isolate(input$time_cus_seg)), ":"),
       choices = c("All", choices),
       selected = "All"
       )
   })
   
   cohort_data_ready <- reactive({
-    req(dashboard_data(), input$time_cus_seg)
+    req(dashboard_data())
     
     segment_val <- if (!is.null(input$heatmap_specific_segment)) {
       input$heatmap_specific_segment
@@ -1670,7 +1681,7 @@ server <- function(input, output, session) {
     
     get_cohort_data(
       dashboard_data(),
-      selected_type = input$time_cus_seg,
+      selected_type = isolate(input$time_cus_seg),
       segment_value = segment_val
     ) 
   })
@@ -1680,23 +1691,24 @@ server <- function(input, output, session) {
     df <- cohort_data_ready()
     req(nrow(df) > 0)
     
-    p <- get_cra_heatmap(df, input$time_cus_seg, input$heatmap_specific_segment)
+    p <- get_cra_heatmap(df, isolate(input$time_cus_seg), input$heatmap_specific_segment)
     
     ggplotly(p, tooltip = "text") %>%
       layout(
-        autosize = TRUE) %>%
+        autosize = TRUE,
+        margin = list(l=0, r=0, b=0, t=30, pad=0)) %>%
       hide_colorbar()
     
   })
   
   # --- 1.5 SEASONAL TREND ANALYSIS---
   seasonal_ts_ready <- reactive({
-    req(dashboard_data(), input$time_cus_seg, input$time_selected_seg)
+    req(dashboard_data(), input$time_selected_seg)
     
     get_seasonal_data(
       dashboard_data(),
-      selected_type = input$time_cus_seg,
-      selected_value = input$time_selected_seg
+      selected_type = isolate(input$time_cus_seg),     
+      selected_value = isolate(input$time_selected_seg)
     )
   })
   
@@ -1704,8 +1716,12 @@ server <- function(input, output, session) {
     df <- seasonal_ts_ready()
     req(nrow(df) > 0, input$season_metric)
     
-    get_cycle_plot(df, input$season_metric) +
-      scale_color_manual(values = morandi_colors)
+    # PASS THE SEGMENT TYPE HERE
+    get_cycle_plot(
+      data = df, 
+      selected_type = isolate(input$time_cus_seg), 
+      metric = input$season_metric
+    )
   })
   
   output$stl_plot <- renderPlot({
@@ -1725,7 +1741,10 @@ server <- function(input, output, session) {
   
   # -- 2.1 CASHFLOW ANALYSIS -- 
   
-  ca_raw_data <- reactive({
+  ca_raw_data <- eventReactive(input$run_cashflow, {
+    
+    gc()
+    
     # Startup defaults
     date_rng <- if(is.null(input$cashflow_date_range)) c("2023-01-01", "2023-12-31") else input$cashflow_date_range
     loc_val  <- if(is.null(input$cashflow_locations)) "All" else input$cashflow_locations
@@ -1747,17 +1766,16 @@ server <- function(input, output, session) {
     
     gc()
     return(droplevels(res))
-  })
+  }, ignoreNULL = TRUE)
   
   liquidity_data <- reactive({
-    req(input$cashflow_date_range, input$cashflow_locations, input$cashflow_time_metric)
+    req(input$cashflow_date_range, input$cashflow_locations)
     
     get_liquidity_data(
       data = ca_raw_data(), 
-      location_value = input$cashflow_locations, 
-      start_date = input$cashflow_date_range[1], 
-      end_date = input$cashflow_date_range[2], 
-      time_metric = input$cashflow_time_metric
+      location_value = isolate(input$cashflow_locations), 
+      start_date = isolate(input$cashflow_date_range[1]), 
+      end_date = isolate(input$cashflow_date_range[2])
     )
   })
   
@@ -1775,13 +1793,13 @@ server <- function(input, output, session) {
   # --- 2.3 CUSTOMER BREAKDOWN ---
   
   cust_breakdown_data <- reactive({
-    req(input$cashflow_date_range, input$cashflow_locations, input$barchart_segment)
+    req(ca_raw_data(), input$barchart_segment)
     
     get_liquidity_cust_data(
       data = ca_raw_data(), 
-      location_value = input$cashflow_locations, 
-      start_date = input$cashflow_date_range[1], 
-      end_date = input$cashflow_date_range[2], 
+      location_value = isolate(input$cashflow_locations), 
+      start_date = isolate(input$cashflow_date_range[1]), 
+      end_date = isolate(input$cashflow_date_range[2]), 
       selected_type = input$barchart_segment
     )
   })

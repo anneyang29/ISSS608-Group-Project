@@ -50,7 +50,7 @@ get_top_month <- function(data){
   result <- data %>%
     mutate(month=lubridate::month(date, label=TRUE))%>%
     group_by(month) %>%
-    summarise(total_tx = n())%>%
+    summarise(total_tx = sum(tx_count))%>%
     ungroup %>%
     filter(total_tx == max(total_tx))%>%
     pull(month)
@@ -63,7 +63,7 @@ get_tx_change <- function(data){
   monthly_tx <- data %>%
     mutate(month=lubridate::month(date, label=TRUE))%>%
     group_by(month) %>%
-    summarise(total_tx = n())%>%
+    summarise(total_tx = sum(tx_count))%>%
     ungroup 
   
   if (nrow(monthly_tx)==1) {
@@ -110,8 +110,8 @@ get_animation_data <- function(data,  selected_type, time_metric){
       mutate(month = lubridate::month(date, label=TRUE)) %>%       
       group_by(month, .data[[selected_type]]) %>%       
       summarise(         
-        avg_tx_value = mean(amount),
-        avg_tx_count = n()/n_distinct(customer_id),
+        avg_tx_value = sum(tx_volume) / sum(tx_count),
+        avg_tx_count = sum(tx_count)/n_distinct(customer_id),
         unique_customers = n_distinct(customer_id),
         .groups = 'drop'         
       ) 
@@ -121,8 +121,8 @@ get_animation_data <- function(data,  selected_type, time_metric){
       mutate(week = yearweek(date)) %>%       
       group_by(week, .data[[selected_type]]) %>%       
       summarise(         
-        avg_tx_value = mean(amount),         
-        avg_tx_count = n()/n_distinct(customer_id),         
+        avg_tx_value = sum(tx_volume) / sum(tx_count),,         
+        avg_tx_count = sum(tx_count) / n_distinct(customer_id),         
         unique_customers = n_distinct(customer_id),         
         .groups = 'drop'         
       )   
@@ -160,7 +160,7 @@ get_bubble_plot <- function(data, selected_type, time_metric){
     ),
     alpha = 0.7, show.legend = FALSE) +     
     theme_grey() + 
-    scale_size(range = c(1,10), limits = c(1, 20000)) +
+    scale_size(range = c(1,10), limits = c(1, 25000)) +
     labs(       
          x = "Average User Transaction Value",          
          y = "Average User Transaction Counts") 
@@ -177,13 +177,20 @@ get_cohort_data <- function(data, selected_type, segment_value){
     plot_data <- data
   }
   
-  cohort_counts  <- plot_data %>%
+  cohort_counts <- plot_data %>%
     mutate(
-      cohort_month = lubridate::floor_date(first_tx, "month"),
-      activity_month = lubridate::floor_date(as.Date(date), "month"),
+      # Ensure both are floors of the month
+      cohort_month = lubridate::floor_date(as.Date(first_tx), "month"),
+      activity_month = lubridate::floor_date(as.Date(date), "month")
+    ) %>%
+    # Calculate month difference
+    mutate(
       month_number = (lubridate::year(activity_month) - lubridate::year(cohort_month)) * 12 + 
         (lubridate::month(activity_month) - lubridate::month(cohort_month))
     ) %>%
+    # Filter out any activity recorded before the cohort month 
+    # (Fixes the "Monday shift"from aggregating data to a weekly basis)
+    filter(month_number >= 0) %>%
     group_by(cohort_month, month_number) %>%
     summarise(active_users = n_distinct(customer_id), .groups = 'drop')
   
@@ -193,7 +200,8 @@ get_cohort_data <- function(data, selected_type, segment_value){
   
   retention_matrix <- cohort_counts %>%
     left_join(initial_cohorts, by = "cohort_month") %>%
-    mutate(retention_pct = active_users / initial_users)
+    mutate(retention_pct = active_users / initial_users) %>%
+    filter(month_number >= 0)
   
   return(retention_matrix)
 }
@@ -236,36 +244,64 @@ get_cra_heatmap <- function(cra_data, selected_type, segment_value) {
 get_seasonal_data <- function(data, selected_type, selected_value){
   result <- data %>%
     group_by(date, !!sym(selected_type)) %>%
-    summarise(tx_count = n(),
-              tx_amt = sum(amount),
+    summarise(tx_count = sum(tx_count),
+              tx_amt = sum(tx_volume),
               user_count = n_distinct(customer_id),
               .groups="drop") %>%
-    mutate(!!sym(selected_type) := fct_drop(!!sym(selected_type)))%>%
+    mutate(!!sym(selected_type) := fct_drop(!!sym(selected_type)),
+           date = tsibble::yearweek(date))%>%
     as_tsibble(index = date, 
                key = !!sym(selected_type))
 }
 
 # cycle plot
-get_cycle_plot <- function (data, metric){
-  if (metric == "tx_count"){
-    titleText = "Transaction Count Cycle Plot"
-    ylab = "Total Count of Transactions"
-  } else if (metric == "tx_amt") {
-    ylab = "Total Transaction Amount"
-    titleText = "Transaction Amount Cycle Plot"
-  } else if (metric == "user_count") {
-    ylab = "Total Unique Customers"
-    titleText = "User Count Cycle Plot"
-    
-  }
+get_cycle_plot <- function (data, selected_type, metric) {
   
-  result <- data %>% 
-    gg_subseries(.data[[metric]], period="1 week") +
-    labs(title=titleText,
-         y=ylab, x='Date') +
-    theme_grey()+
-    theme(axis.text.x = element_blank(),
-          axis.ticks.x=element_blank())
+  # 2. Process data: Ensure Week of Month is a clean factor
+  plot_df <- data %>%
+    as_tibble() %>%
+    mutate(
+      date = as.Date(date),
+      month = lubridate::month(date, label = TRUE, abbr = TRUE),
+      # Create clean Week Labels
+      week_of_month = paste("Week", ceiling(lubridate::day(date) / 7))
+    )
+  
+  # 3. Calculate Average per "Week Type" per Segment
+  # This creates the horizontal reference line for each facet
+  week_type_avgs <- plot_df %>%
+    group_by(week_of_month, !!sym(selected_type)) %>%
+    summarise(avg_val = mean(.data[[metric]], na.rm = TRUE), .groups = "drop")
+  
+  # 4. Build the Plot
+  result <- ggplot(plot_df, aes(x = month, y = .data[[metric]], color = !!sym(selected_type))) +
+    # The Horizontal Reference Line (Annual average for that specific week number)
+    geom_hline(data = week_type_avgs, aes(yintercept = avg_val, color = !!sym(selected_type)), 
+               linetype = "dashed", alpha = 0.6) +
+    
+    # Use geom_line with group = interaction to ensure lines stay WITHIN facets
+    geom_line(aes(group = interaction(!!sym(selected_type), week_of_month)), linewidth = 0.8) +
+    geom_point(size = 1.2) +
+    
+    # FACET BY WEEK NUMBER
+    # scales = "free_x" is optional, but helps if some months don't have Week 5
+    facet_grid(~week_of_month) + 
+    
+    labs(y = ylab, 
+         x = "Month",
+         color = humanize_var(selected_type)) +
+    theme_grey() +
+    theme(
+      # Rotate x-axis labels to prevent overlapping
+      plot.margin = margin(2, 2, 2, 2, "pt"),
+      axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, size = 8),
+      panel.spacing = unit(0.2, "lines"), 
+      strip.background = element_rect(fill = "#343a40"),
+      strip.text = element_text(face = "bold", color = "white"),
+      legend.position = "bottom",
+      legend.margin = margin(t = -10),  
+      panel.grid.minor = element_blank()
+    )
   
   return(result)
 }
@@ -297,6 +333,11 @@ get_stl <- function(data, metric, modelType, speriod, swindow=7, twindow=11) {
       labs(title = "Classical Decomposition (Multiplicative)")
   }
   
+  result <- result +
+    theme(
+      plot.margin = margin(2, 2, 2, 2, "pt"),
+      legend.margin = margin(t = -10)
+    )
   return(result)
 }
 
@@ -307,29 +348,13 @@ get_stl <- function(data, metric, modelType, speriod, swindow=7, twindow=11) {
 
 # filter cashflow data
 
-get_liquidity_data <- function(data, location_value, start_date, end_date, time_metric){
+get_liquidity_data <- function(data, location_value, start_date, end_date){
   
   filtered_data <- filter_tx_dates(data, start_date, end_date) %>%
     filter_customer("location", location_value)
-  
-  if (time_metric == "Daily"){
     result <- filtered_data %>%
       pivot_wider(names_from = type, 
-                  values_from = amount,
-                  values_fn = sum) %>%
-      replace_na(list(Withdrawal=0, Deposit=0)) %>%
-      group_by(date) %>%
-      summarise(
-        Inflow=sum(Deposit),
-        Outflow=sum(Withdrawal)
-      ) %>%
-      mutate(Group = ifelse(Inflow > Outflow, "Inflow Higher", "Outflow Higher"),
-             net_liquidity = Inflow-Outflow)
-    
-  } else if (time_metric=="Weekly"){
-    result <- filtered_data %>%
-      pivot_wider(names_from = type, 
-                  values_from = amount,
+                  values_from = tx_volume,
                   values_fn = sum) %>%
       replace_na(list(Withdrawal=0, Deposit=0)) %>%
       mutate(week = yearweek(date),
@@ -341,7 +366,6 @@ get_liquidity_data <- function(data, location_value, start_date, end_date, time_
       ) %>%
       mutate(Group = ifelse(Inflow > Outflow, "Inflow Higher", "Outflow Higher"),
              net_liquidity = Inflow-Outflow)
-  }
   
   return(result)
 }
@@ -383,10 +407,10 @@ get_liquidity_cust_data <- function(data, location_value, start_date, end_date, 
   result <- filtered_data %>%
     group_by(.data[[selected_type]]) %>%
     summarise(
-      Inflow_amt=sum(ifelse(type=='Deposit', amount,0)),
-      Outflow_amt=sum(ifelse(type=='Withdrawal', amount,0)),
-      Inflow_count=sum(ifelse(type=='Deposit', 1,0)),
-      Outflow_count=sum(ifelse(type=='Withdrawal', 1,0)),
+      Inflow_amt=sum(ifelse(type=='Deposit', tx_volume, 0)),
+      Outflow_amt=sum(ifelse(type=='Withdrawal', tx_volume, 0)),
+      Inflow_count=sum(ifelse(type=='Deposit', tx_count,0)),
+      Outflow_count=sum(ifelse(type=='Withdrawal', tx_count,0)),
       Inflow_users = n_distinct(customer_id[type == 'Deposit']),          
       Outflow_users=n_distinct(customer_id[type == 'Withdrawal'])
     )%>%
@@ -437,7 +461,6 @@ get_barcharts <- function(data, selected_type, metric, viewtype){
   plot <- ggplot(plot_data, 
                  aes(x = Type, y = Amount, fill = .data[[selected_type]],
                      text = paste0(humanize_var(selected_type), ": ", .data[[selected_type]],
-                                   "<br>Cashflow: ", Type,
                                    "<br>Value: ", tooltip_label))) +
     geom_col(position=ifelse(viewtype=="amt", "stack", "fill")) + 
     scale_y_continuous(labels = if(viewtype == "amt") scales::label_number(scale_cut = scales::cut_short_scale()) else scales::label_percent()) +

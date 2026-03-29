@@ -76,7 +76,6 @@ build_base_data_from_csv <- function(customer_csv_path, tx_csv_path) {
       income_bracket = factor(income_bracket, 
                               levels = c("Low", "Medium", "High", "Very High"), 
                               ordered = TRUE),
-      # Factorize nominal columns here for time_data as well
       gender = as.factor(gender),
       acquisition_channel = as.factor(acquisition_channel),
       location = as.factor(location)
@@ -84,7 +83,18 @@ build_base_data_from_csv <- function(customer_csv_path, tx_csv_path) {
     select(customer_id, gender, acquisition_channel, customer_segment,
            location, clv_segment, income_bracket, first_tx)
   
-  time_data <- tx_clean %>%
+  weekly_tx <- tx_clean%>%
+    mutate(date = floor_date(date, unit = "week", week_start = 1)) %>%
+    # Group by the customer, the week, and the transaction type
+    group_by(customer_id, date, type) %>%
+    # Calculate metrics for that specific type in that specific week
+    summarise(
+      tx_count = n(),
+      tx_volume = sum(amount, na.rm = TRUE),
+      .groups = "drop"
+    ) 
+  
+  time_data <- weekly_tx %>%
     dplyr::inner_join(cus_clean, by = "customer_id")
   
   list(
