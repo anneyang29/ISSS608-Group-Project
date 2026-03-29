@@ -81,7 +81,7 @@ build_base_data_from_csv <- function(customer_csv_path, tx_csv_path) {
       location = as.factor(location)
     ) %>%
     select(customer_id, gender, acquisition_channel, customer_segment,
-           location, clv_segment, income_bracket, first_tx)
+           location, clv_segment, income_bracket)
   
   weekly_tx <- tx_clean%>%
     mutate(date = floor_date(date, unit = "week", week_start = 1)) %>%
@@ -97,9 +97,23 @@ build_base_data_from_csv <- function(customer_csv_path, tx_csv_path) {
   time_data <- weekly_tx %>%
     dplyr::inner_join(cus_clean, by = "customer_id")
   
+  forecast_data <- tx_clean %>%
+    left_join(cus_clean, by="customer_id") %>%
+    pivot_wider(names_from = type, 
+                values_from = amount,
+                values_fn = sum) %>%
+    replace_na(list(Withdrawal=0, Deposit=0)) %>%
+    group_by(date) %>%
+    summarise(
+      Inflow=sum(Deposit),
+      Outflow=sum(Withdrawal)
+    ) %>%
+    mutate(net_liquidity = Inflow-Outflow)
+  
   list(
     base_data = base_data,
-    time_data = time_data
+    time_data = time_data,
+    forecast_data=forecast_data
   )
 }
 
@@ -140,5 +154,11 @@ saveRDS(
 write_parquet(data_bundle$time_data, 
               "RShiny/data/shiny_time_data.parquet")
 
-cat("Done: created shiny_base_data_light.rds and shiny_time_data.rds\n")
+saveRDS(data_bundle$forecast_data,
+  "RShiny/data/shiny_forecast_data.rds"
+)
+
+cat("Done: created shiny_base_data_light.rds, shiny_time_data.rds, shiny_forecast_data.rd\n")
+
+
 

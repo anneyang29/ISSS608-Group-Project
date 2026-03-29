@@ -8,7 +8,8 @@ pacman::p_load(shiny, shinydashboard, shinybusy, shinycssloaders,
                tidyverse, dplyr, readr, ggcorrplot, parallelPlot, 
                cluster, mclust, fresh, bslib, bsicons,  tsibble, fable, 
                feasts, tidymodels, timetk, 
-               modeltime, rlang, plotly, data.table, lubridate)
+               modeltime, rlang, plotly, data.table, lubridate,
+               reactable)
 
 find_existing_path <- function(paths) {
   existing <- paths[file.exists(paths)]
@@ -33,8 +34,15 @@ time_rds_candidates <- c(
   file.path("..", "data", "shiny_time_data.rds")
 )
 
+forecast_rds_candidates <- c(
+  file.path("RShiny", "data", "shiny_forecast_data.rds"),
+  file.path("data", "shiny_forecast_data.rds"),
+  file.path("..", "RShiny", "data", "shiny_forecast_data.rds"),
+  file.path("..", "data", "shiny_forecast_data.rds")
+)
 base_data_path <- find_existing_path(base_rds_candidates)
 time_data_path <- find_existing_path(time_rds_candidates)
+forecast_data_path <- find_existing_path(forecast_rds_candidates)
 
 if (!is.na(base_data_path)) {
   message("Loading light base RDS from: ", base_data_path)
@@ -48,6 +56,20 @@ if (!is.na(base_data_path)) {
 } else {
   stop(
     "shiny_base_data_light.rds not found. Please deploy the prebuilt light RDS file with the app.",
+    call. = FALSE
+  )
+}
+
+if (!is.na(forecast_data_path)) {
+  message("Loading forecast RDS from: ", forecast_data_path)
+  
+  forecast_data <- readRDS(forecast_data_path)
+  
+  gc()
+  
+} else {
+  stop(
+    "shiny_forecast_data.rds not found. Please deploy the prebuilt light RDS file with the app.",
     call. = FALSE
   )
 }
@@ -370,6 +392,12 @@ customer_types <-  c("Gender" = "gender",
                      "Customer Lifetime Value" = "clv_segment",
                      "Income Bracket" = "income_bracket")
 
+ca_customer_types <-  c("Gender" = "gender", 
+                     "Acquisition channel" = "acquisition_channel",
+                     "Customer Segment" = "customer_segment",
+                     "Customer Lifetime Value" = "clv_segment",
+                     "Income Bracket" = "income_bracket")
+
 time_dashboard_filters <- sidebar(
   title = h4("Dashboard Filters"),
   bg = "lightgrey",
@@ -380,7 +408,8 @@ time_dashboard_filters <- sidebar(
     selected = "All"
   ),
   dateRangeInput("time_date_range", "Transactions Date Range",
-                 start = "2023-01-01", end = "2023-12-31", 
+                 start = "2023-01-01", end = "2023-06-30", 
+                 min = "2023-01-01", max = "2023-12-31", 
                  format = "yyyy-mm-dd",
                  startview = "year"),
   selectInput("time_cus_seg", "Segment Customers by", choices = customer_types),
@@ -395,12 +424,14 @@ time_dashboard_filters <- sidebar(
   
 time_key_stats <- layout_column_wrap(
   fill = TRUE,
-  width=1,
+  width=1/4,
   value_box(
     width=2,
     title = "TOP TX MONTH.", 
     value = withSpinner(textOutput("stat_top_month"), type = 7, size=0.5, color="white", proxy.height = "50px"),
     theme = "primary",
+    showcase = bs_icon("calendar", size = "0.7em"),
+    showcase_layout = "top right",
     full_screen = FALSE
   ),
   value_box(
@@ -408,13 +439,17 @@ time_key_stats <- layout_column_wrap(
     title = "NEW CUSTOMERS",
     value = withSpinner(textOutput("stat_new_cust"), type = 7, size=0.5, color="black", proxy.height = "50px"),
     theme = "info",
+    showcase = bs_icon("person-plus", size = "0.7em"),
+    showcase_layout = "top right",
     full_screen = FALSE
   ),
   value_box(
     width=2,
-    title = "M-O-M TX CHANGE",
+    title = "LATEST M-O-M TX CHANGE",
     value = withSpinner(textOutput("stat_tx_change"), type = 7, size=0.5, color="black", proxy.height = "50px"),
     theme = "success",
+    showcase = bs_icon("graph-up", size = "0.7em"),
+    showcase_layout = "top right",
     full_screen = FALSE
   ),
   value_box(
@@ -422,6 +457,8 @@ time_key_stats <- layout_column_wrap(
     title = "TOTAL CUSTOMERS",
     value = withSpinner(textOutput("stat_total_cust"), type = 7, size=0.5, color="black", proxy.height = "50px"),
     theme = "warning",
+    showcase = bs_icon("people", size = "0.7em"),
+    showcase_layout = "top right",
     full_screen = FALSE
   )
 )
@@ -442,7 +479,7 @@ bubble_plot <- card(
   ),
   card_body(
     padding = 0,
-    withSpinner(plotlyOutput("animation_plot"))
+    withSpinner(plotlyOutput("animation_plot", height="400px"))
     )
 )
 
@@ -463,7 +500,7 @@ cra_plot <- card(
     )
   ),
   card_body(
-    withSpinner(plotlyOutput("cra_heatmap"))
+    withSpinner(plotlyOutput("cra_heatmap", height="400px"))
   )
 )
 
@@ -514,19 +551,17 @@ seasonal_analysis_card <- navset_card_pill(
 Dashboard <- page_fluid(
   add_busy_spinner(spin = "fading-circle", color = "#0275d8"),
   layout_sidebar(
+    fillable=FALSE,
     sidebar = time_dashboard_filters,
-    layout_columns(col_widths = 12,
-                   layout_columns(
-                      col_widths=c(3,9),
-                      time_key_stats,
-                      bubble_plot,
-                      ),
-                   layout_columns(
-                     col_widths = c(6,6),
-                     cra_plot,
-                     seasonal_analysis_card)
-                  )
-  ))
+    time_key_stats,
+    bubble_plot,
+    layout_columns(
+      width=1,
+      col_widths = c(6,6),
+      cra_plot,
+      seasonal_analysis_card
+    ))
+  )
 
 ca_filters <- sidebar(
   title = h4("Filters"),
@@ -534,8 +569,10 @@ ca_filters <- sidebar(
 
   # Global filters stay at the top
   dateRangeInput("cashflow_date_range", "Transactions Date Range",
-                 start = "2023-01-01", end = "2023-12-31", format = "yyyy-mm-dd"),
-  
+                 min = "2023-01-01", max = "2023-12-31",
+                 start = "2023-01-01", end = "2023-06-30",
+                 format = "yyyy-mm-dd",
+                 startview="year"),
   selectInput("cashflow_locations", "Locations",
               choices = c("All", "Armenia, Quindío", "Barranquilla, Atlántico",    
                           "Bogotá, Cundinamarca", "Bucaramanga, Santander",      
@@ -546,7 +583,6 @@ ca_filters <- sidebar(
                           "Pasto, Nariño", "Pereira, Risaralda",         
                           "Santa Marta, Magdalena", "Sincelejo, Sucre", 
                           "Valledupar, Cesar", "Villavicencio, Meta")),
-  
   # Accordion sections for specific chart settings
   accordion(
     open = FALSE, # Set to TRUE if you want them open by default
@@ -555,7 +591,7 @@ ca_filters <- sidebar(
       icon = bs_icon("bar-chart"),
       bg = "lightgrey",
       selectInput("barchart_segment", "Customer Segment", 
-                  choices = customer_types), 
+                  choices = ca_customer_types), 
       selectInput("barchart_metric", "Metric to Display", 
                   choices = c("Total Amount" = "tx_amt", 
                               "Transaction Count" = "tx_count", 
@@ -586,7 +622,8 @@ customer_breakdown <- card(
   withSpinner(plotlyOutput("cashflow_barchart"))
   )
 
-CashflowAnalysis <- page_fluid(
+CashflowAnalysis <- page_fillable(
+  fill="TRUE",
   layout_sidebar(
     sidebar = ca_filters,
     layout_columns(col_widths = c(6,6),
@@ -594,10 +631,89 @@ CashflowAnalysis <- page_fluid(
                   customer_breakdown)
     ))
 
+CashPredOptions <- sidebar(
+  bg = "lightgrey",
+  accordion(
+    id ="forecast_accordion",
+    accordion_panel(
+      value = "panel1",
+      open=TRUE,
+      title = "STEP 1",
+      bg = "lightgrey",
+      sliderInput("cashflow_splot", "Training/Test data split",
+                  min = 0.7, max = 0.99,
+                  step=0.01, value=0.95),
+      checkboxGroupInput("cashflow_models", "Select prediction models:",
+                         choices=c("Exponential smoothing" = "model_fit_ets",
+                                   "Auto ARIMA"= "model_fit_arima",
+                                   "Boosted ARIMA"= "model_fit_arima_boosted",
+                                   "Prophet"="model_fit_prophet",
+                                   "Boosted Prophet"="model_fit_prophet_boost",
+                                   "Linear Regression"="model_fit_linear",
+                                   "Multivariate Adaptive Regression Spline" ="model_fit_mars",
+                                   "Naive"="model_fit_naive"),
+                         selected = c("model_fit_ets", "model_fit_arima_boosted", 
+                                      "model_fit_prophet_boost", "model_fit_linear")),
+      hr(),
+      actionButton(
+        inputId = "run_calibration", 
+        label = "Calibrate and Test Models", 
+        icon = icon("play"), 
+        class = "btn-primary", 
+        width = "100%")
+    ),
+    accordion_panel(
+      value="panel2",
+      open=FALSE,
+      title="STEP 2",
+      bg="lightgrey",
+      layout_columns(
+        col_widths = c(6, 6),
+        numericInput(
+          inputId = "pred_horizon_val",
+          label = "Horizon",
+          value = 4,
+          min = 1,
+          max = 12
+        ),
+        selectInput(
+          inputId = "pred_unit",
+          label = "Unit",
+          choices = c("weeks", "months"),
+          selected = "weeks"
+        )
+      ),
+      hr(),
+      actionButton(
+        inputId = "run_prediction", 
+        label = "Make Predictions", 
+        icon = icon("play"), 
+        class = "btn-primary", 
+        width = "100%"
+      )
+    )
+  )
+)
+
+Cash_Prediction_Tab <- page_fluid(
+  layout_sidebar(
+    sidebar = CashPredOptions,
+    card(
+      card_header(
+        class = "d-flex justify-content-between align-items-center",
+        textOutput("forecast_card_title")
+      ),
+      card_body(
+        uiOutput("forecast_results_ui")
+      )
+    )
+  )
+)
+
 CashflowSubTabs <- navset_card_tab(
   id = "CashflowSubTabs",
   nav_panel("Historical Cashflow Analysis", CashflowAnalysis),
-  nav_panel("Future Cashflow Prediction", "Content for Tab 2"),
+  nav_panel("Future Cashflow Prediction", Cash_Prediction_Tab),
 )
 
 
@@ -635,8 +751,6 @@ ui <- page_navbar(
       .sidebar { font-size: 0.8rem; }
       .control-label { font-size: 0.8rem; font-weight: bold; }
       .card-header { font-size: 0.9rem !important; padding: 0.5rem 1rem !important; }
-      .bslib-value-box .value-box-title { font-size: 1rem !important; }
-      .bslib-value-box .value-box-value { font-size: 1.5rem !important; }
       .bslib-column-wrap { gap: 10px !important; }
       .navbar { 
         min-height: 50px !important; 
@@ -644,17 +758,18 @@ ui <- page_navbar(
         padding-bottom: 0.2rem !important; 
       }
       .card-body {
-        display: flex !important;
-        flex-direction: column !important;
         padding: 10px !important; /* Tighten internal spacing */
       }
-      .shiny-spinner-placeholder {
-        display: flex;
-        align-items: center;
+      .bslib-value-box .card-body {
+      padding: 0 !important;
       }
-      .js-plotly-plot, .plotly {
-        height: 100% !important;
-        width: 100% !important;
+      .bslib-value-box.showcase-left-center .bslib-visual-reveal {
+        flex: 0 0 50px !important;      /* Fixed narrow width */
+        width: 50px !important;
+        padding: 0 !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
       }
     "))
   ),
@@ -1564,6 +1679,21 @@ server <- function(input, output, session) {
       lubridate::ceiling_date(as.Date(input$time_date_range[2]), "month") + months(1)
     )
     
+    # Calculate the difference in days
+    days_diff <- as.numeric(difftime(input$time_date_range[2], input$time_date_range[1], units = "days"))
+    
+    # If range is > 186 days (~6 months), show warning and STOP execution
+    if (days_diff > 186) {
+      showModal(modalDialog(
+        title = span(icon("circle-exclamation"), "Date Range Too Large", style = "color: #e74c3c;"),
+        "You have selected more than 6 months of data. 
+       Please shorten your date range to ensure the server can process your request without crashing.",
+        footer = modalButton("Close"),
+        easyClose = TRUE
+      ))
+      return(NULL) # This stops the rest of the plots from trying to render
+    }
+    
     # 2. Open Dataset
     td <- load_time_data()
     
@@ -1639,16 +1769,11 @@ server <- function(input, output, session) {
   })
   
   output$animation_plot <- renderPlotly({
-    req(session$clientData$output_animation_plot_width > 0)
-    
     df <- animation_data_ready()
     req(nrow(df) > 0, input$time_granularity)
     
-    plot<- get_bubble_plot(df, isolate(input$time_cus_seg), input$time_granularity)
+    get_bubble_plot(df, isolate(input$time_cus_seg), input$time_granularity)
     
-    ggplotly(plot, tooltip="text")%>%
-      layout(autosize = TRUE,
-             margin = list(l=0, r=0, b=0, t=30, pad=0)) 
   })
   
   # -- 1.4 CRA HEATMAP --
@@ -1687,7 +1812,6 @@ server <- function(input, output, session) {
   })
   
   output$cra_heatmap <- renderPlotly({
-    
     df <- cohort_data_ready()
     req(nrow(df) > 0)
     
@@ -1748,7 +1872,21 @@ server <- function(input, output, session) {
     # Startup defaults
     date_rng <- if(is.null(input$cashflow_date_range)) c("2023-01-01", "2023-12-31") else input$cashflow_date_range
     loc_val  <- if(is.null(input$cashflow_locations)) "All" else input$cashflow_locations
+    # Calculate the difference in days
     
+    days_diff <- as.numeric(difftime(input$cashflow_date_range[2], input$cashflow_date_range[1], units = "days"))
+    
+    # If range is > 186 days (~6 months), show warning and STOP execution
+    if (days_diff > 186) {
+      showModal(modalDialog(
+        title = span(icon("circle-exclamation"), "Date Range Too Large", style = "color: #e74c3c;"),
+        "You have selected more than 6 months of data. 
+       Please shorten your date range to ensure the server can process your request without crashing.",
+        footer = modalButton("Close"),
+        easyClose = TRUE
+      ))
+      return(NULL) # This stops the rest of the plots from trying to render
+    }
     # 1. Point to Parquet
     ds <- load_time_data()
     
@@ -1769,7 +1907,7 @@ server <- function(input, output, session) {
   }, ignoreNULL = TRUE)
   
   liquidity_data <- reactive({
-    req(input$cashflow_date_range, input$cashflow_locations)
+    req(input$cashflow_date_range)
     
     get_liquidity_data(
       data = ca_raw_data(), 
@@ -1816,7 +1954,223 @@ server <- function(input, output, session) {
       metric = input$barchart_metric, 
       viewtype = input$barchart_view
     )
-    ggplotly(barcharts, tooltip = "text")
+    
+    ggplotly(barcharts, tooltip = "text")%>%
+      layout(
+        showlegend = TRUE)
+  })
+  
+  #--- 2.4 PREDICTION --_
+  
+  store <- reactiveValues(
+    splits = NULL,
+    calibration_tbl = NULL,
+    refit_tbl = NULL
+  )
+  
+
+  # --- STEP 1: CALIBRATION ---
+  observeEvent(input$run_calibration, {
+    req(input$cashflow_models)
+    
+    withProgress(message = 'Fitting models and calibrating...', value = 0, {
+      
+      store$splits <- get_splits(forecast_data, input$cashflow_splot)
+      incProgress(0.2)
+      
+      fitted_models <- list()
+      
+      # Model Fitting Logic
+      total_models <- length(input$cashflow_models)
+      current_count <- 0
+      
+      for (model_id in input$cashflow_models) {
+        current_count <- current_count + 1
+        incProgress(0.5 / total_models, detail = paste("Fitting", model_id))
+        
+        train_data <- training(store$splits)
+        
+        # --- MODEL SELECTION LOGIC ---
+        
+        # Exponential Smoothing
+        if (model_id == "model_fit_ets") {
+          fitted_models$model_fit_ets <- exp_smoothing() %>% 
+            set_engine("ets") %>% 
+            fit(net_liquidity ~ as.Date(date), data = train_data)
+        }
+        
+        # Auto ARIMA
+        else if (model_id == "model_fit_arima") {
+          fitted_models$model_fit_arima <- arima_reg() %>% 
+            set_engine("auto_arima") %>% 
+            fit(net_liquidity ~ as.Date(date), data = train_data)
+        }
+        
+        # Boosted ARIMA (ARIMA + XGBoost)
+        else if (model_id == "model_fit_arima_boosted") {
+          fitted_models$model_fit_arima_boosted <- arima_boost(min_n = 2, learn_rate = 0.015) %>% 
+            set_engine("auto_arima_xgboost") %>% 
+            fit(net_liquidity ~ as.Date(date), data = train_data)
+        }
+        
+        # Prophet
+        else if (model_id == "model_fit_prophet") { # Matching your UI typo 'mode'
+          fitted_models$model_fit_prophet <- prophet_reg() %>% 
+            set_engine("prophet") %>% 
+            fit(net_liquidity ~ as.Date(date), data = train_data)
+        }
+        
+        # Boosted Prophet (Prophet + XGBoost)
+        else if (model_id == "model_fit_prophet_boost") {
+          fitted_models$model_fit_prophet_boost <- prophet_boost() %>% 
+            set_engine("prophet_xgboost") %>% 
+            fit(net_liquidity ~ as.Date(date), data = train_data)
+        }
+        
+        # Linear Regression
+        else if (model_id == "model_fit_linear") {
+          fitted_models$model_fit_linear <- linear_reg() %>% 
+            set_engine("lm") %>% 
+            fit(net_liquidity ~ as.Date(date), data = train_data)
+        }
+        
+        # MARS (Multivariate Adaptive Regression Splines)
+        else if (model_id == "model_fit_mars") {
+          fitted_models$model_fit_mars <- mars(mode = "regression") %>% 
+            set_engine("earth") %>% 
+            fit(net_liquidity ~ as.Date(date), data = train_data)
+        }
+        
+        # Naive
+        else if (model_id == "model_fit_naive") {
+          fitted_models$model_fit_naive <- naive_reg() %>% 
+            set_engine("naive") %>% 
+            fit(net_liquidity ~ as.Date(date), data = train_data)
+        }
+      }
+      
+      # Create Model Table from the resulting list
+      validate(need(length(fitted_models) > 0, "Please select at least one model."))
+      models_tbl <- do.call(modeltime_table, fitted_models)
+      
+      incProgress(0.5)
+      
+      # Create Model Table
+      models_tbl <- do.call(modeltime_table, fitted_models)
+      
+      # Calibrate
+      store$calibration_tbl <- models_tbl %>% 
+        modeltime_calibrate(new_data = testing(store$splits), quiet = TRUE)
+      
+      incProgress(0.3)
+      accordion_panel_set("forecast_accordion", "panel2")
+    })
+  }, ignoreNULL=TRUE)
+  
+  # Render Calibration Plot
+  output$calibration_plot <- renderPlotly({
+    req(store$calibration_tbl)
+    store$calibration_tbl %>%
+      modeltime_forecast(new_data = testing(store$splits), actual_data = forecast_data) %>%
+      plot_modeltime_forecast(.interactive = TRUE, .plotly_slider = TRUE)
+  })
+  
+  # Render Accuracy Table
+  output$accuracy_table <- renderReactable({
+    req(store$calibration_tbl)
+    store$calibration_tbl %>%
+      modeltime_accuracy() %>%
+      table_modeltime_accuracy(.interactive = TRUE)
+  })
+  
+  # --- STEP 2: PREDICTION ---
+  observeEvent(input$run_prediction, {
+    req(store$calibration_tbl)
+    
+    withProgress(message = 'Refitting models to full data...', value = 0, {
+      store$refit_tbl <- store$calibration_tbl %>%
+        modeltime_refit(data = forecast_data)
+      incProgress(0.5)
+    })
+    accordion_panel_set("forecast_accordion", "panel1")
+  })
+  
+  # Render Future Prediction Plot
+  output$prediction_plot <- renderPlotly({
+    req(store$refit_tbl)
+    
+    forecast_tbl <- refit_forecast(
+      store$refit_tbl, 
+      forecast_data, 
+      input$pred_horizon_val, 
+      input$pred_unit
+    )
+    
+    forecast_tbl %>%
+      plot_modeltime_forecast(.interactive = TRUE, .plotly_slider = TRUE)
+  })
+  
+  output$pred_accuracy_table <- renderReactable({
+    req(store$refit_tbl)
+    store$refit_tbl %>%
+      modeltime_accuracy() %>%
+      table_modeltime_accuracy(.interactive = TRUE)
+  })
+  
+  # display results of calibration/prediction
+  
+  display_state <- reactiveVal("empty") 
+  
+  # Update state when buttons are pressed
+  observeEvent(input$run_calibration, { display_state("test") })
+  observeEvent(input$run_prediction, { display_state("future") })
+  
+  # Dynamic Title
+  output$forecast_card_title <- renderText({
+    switch(display_state(),
+           "empty"  = "Forecasting System: Waiting for Calibration",
+           "test"   = "Model Testing: Performance on Test Data",
+           "future" = "Model Projection: Future Cashflow Forecast"
+    )
+  })
+  
+  # THE DYNAMIC UI SWITCHER
+  output$forecast_results_ui <- renderUI({
+    state <- display_state()
+    
+    if (state == "empty") {
+      return(
+        div(class = "text-center mt-5",
+            icon("chart-line", class = "fa-4x mb-3", style = "color: #ced4da;"),
+            h4("Ready to Forecast", style = "color: #adb5bd;"),
+            p("Select your models in Step 1 and click 'Calibrate' to begin.")
+        )
+      )
+    }
+    
+    if (state == "test") {
+      # Show the Calibration Plot and Accuracy Table stacked
+      return(
+        tagList(
+          plotlyOutput("calibration_plot", height = "550px"),
+          hr(),
+          h5("Accuracy Metrics", class = "mt-3"),
+          reactableOutput("accuracy_table")
+        )
+      )
+    }
+    
+    if (state == "future") {
+      # Show only the Future Prediction Plot
+      return(
+        tagList(
+          plotlyOutput("prediction_plot", height = "550px"),
+          hr(),
+          h5("Accuracy Metrics", class = "mt-3"),
+          reactableOutput("pred_accuracy_table")
+        )
+      )
+    }
   })
 }
 

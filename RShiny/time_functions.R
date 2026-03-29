@@ -107,14 +107,16 @@ get_total_cust <- function(end_date, data){
 get_animation_data <- function(data,  selected_type, time_metric){   
   if (time_metric=="month"){     
     result <- data %>%       
-      mutate(month = lubridate::month(date, label=TRUE)) %>%       
+      mutate(month = lubridate::month(date,label = TRUE, abbr = TRUE)) %>% 
+      mutate(month = forcats::fct_drop(month)) %>% 
       group_by(month, .data[[selected_type]]) %>%       
       summarise(         
         avg_tx_value = sum(tx_volume) / sum(tx_count),
-        avg_tx_count = sum(tx_count)/n_distinct(customer_id),
+        avg_tx_count = sum(tx_count) / n_distinct(customer_id),
         unique_customers = n_distinct(customer_id),
-        .groups = 'drop'         
-      ) 
+        .groups = 'drop'          
+      ) %>%
+      arrange(month)         
     
   } else if (time_metric=="week"){     
     result <- data  %>%       
@@ -140,7 +142,7 @@ get_bubble_plot <- function(data, selected_type, time_metric){
       mutate(frame_id=month)
   }
   
-  result <- ggplot(data, 
+  plot <- ggplot(data, 
                    aes(x = avg_tx_value,
                        y = avg_tx_count,
                        size = unique_customers,
@@ -165,43 +167,59 @@ get_bubble_plot <- function(data, selected_type, time_metric){
          x = "Average User Transaction Value",          
          y = "Average User Transaction Counts") 
   
+  result<- ggplotly(plot, tooltip = "text") %>%
+    layout(autosize = TRUE,
+           margin = list(l=0, r=0, b=0, t=30, pad=0))
+  
   return(result) }
 
 # Cohort retention heatmap
 get_cohort_data <- function(data, selected_type, segment_value){
+  
+  # 1. Define TRUE first_tx for every customer in the current data scope
+  # This ensures the cohort assignment is based on their literal first appearance
+  customer_first_dates <- data %>%
+    group_by(customer_id) %>%
+    summarise(true_first_tx = min(as.Date(date), na.rm = TRUE), .groups = 'drop')
+  
+  # Join this back to the main data
+  data_with_first <- data %>%
+    left_join(customer_first_dates, by = "customer_id")
+  
+  # 2. Define the Cohort Base (The Denominator)
+  # We calculate this from ALL users in 'data' before filtering by type
+  # so that "Total Cohort" = "Every user who joined that month"
+  initial_cohorts <- data_with_first %>%
+    mutate(cohort_month = lubridate::floor_date(true_first_tx, "month")) %>%
+    group_by(cohort_month) %>%
+    summarise(initial_users = n_distinct(customer_id), .groups = 'drop')
+  
+  # 3. Filter for the specific action (The Numerator)
   if (segment_value != 'All'){
-    plot_data <- data %>%
+    plot_data <- data_with_first %>% 
       filter(.data[[selected_type]] == segment_value)
-  }
-  else{
-    plot_data <- data
+  } else {
+    plot_data <- data_with_first
   }
   
+  # 4. Calculate Activity
   cohort_counts <- plot_data %>%
     mutate(
-      # Ensure both are floors of the month
-      cohort_month = lubridate::floor_date(as.Date(first_tx), "month"),
+      cohort_month = lubridate::floor_date(true_first_tx, "month"),
       activity_month = lubridate::floor_date(as.Date(date), "month")
     ) %>%
-    # Calculate month difference
     mutate(
       month_number = (lubridate::year(activity_month) - lubridate::year(cohort_month)) * 12 + 
         (lubridate::month(activity_month) - lubridate::month(cohort_month))
     ) %>%
-    # Filter out any activity recorded before the cohort month 
-    # (Fixes the "Monday shift"from aggregating data to a weekly basis)
     filter(month_number >= 0) %>%
     group_by(cohort_month, month_number) %>%
     summarise(active_users = n_distinct(customer_id), .groups = 'drop')
   
-  initial_cohorts <- cohort_counts %>%
-    filter(month_number == 0) %>%
-    select(cohort_month, initial_users = active_users)
-  
+  # 5. Join and Calculate %
   retention_matrix <- cohort_counts %>%
     left_join(initial_cohorts, by = "cohort_month") %>%
-    mutate(retention_pct = active_users / initial_users) %>%
-    filter(month_number >= 0)
+    mutate(retention_pct = active_users / initial_users)
   
   return(retention_matrix)
 }
@@ -221,12 +239,7 @@ get_cra_heatmap <- function(cra_data, selected_type, segment_value) {
                          high = "steelblue",
                          midpoint = 0.5,
                          labels = scales::percent,
-                         limits = c(0, 1),
-                         guide = guide_colorbar(
-                           direction = "horizontal", 
-                           title.position = "top",   # Puts the title 'Retention Rate' above the bar
-                           barwidth = 15             # Makes the bar a bit wider
-                         )) +
+                         limits = c(0, 1)) +
     theme_grey() +
     theme(
       legend.position = "none"    
@@ -467,12 +480,44 @@ get_barcharts <- function(data, selected_type, metric, viewtype){
     scale_fill_brewer(palette = "Set2") +
     theme_grey() +
     labs(
-      title = paste0("Inflow vs Outflow Composition by ", selected_type),
+      title = "Inflow vs Outflow Composition",
       x = "Cashflow",
       y = ifelse(viewtype == "amt", y_label, "Percentage Contribution"),
       fill = selected_type
-    )+
-    theme(legend.position = "none")
-  
+    )
+
   return(plot)
 }
+
+# FORECASTING
+
+get_splits <- function(data, splitValue){
+  result = data  %>%
+    initial_time_split(prop = splitValue)
+  
+  return(result)
+}
+
+get_models_tbl <- function(model_names){
+  
+  model_list <- mget(model_names, envir = caller_env())
+  
+  models_tbl <- do.call(modeltime_table, model_list)
+  
+  return(models_tbl)
+}
+
+refit_forecast <- function(refit_table, dataset, numInput, time_metric){
+  
+  forecast_period <- paste0(numInput, time_metric)
+  
+  forecast_tbl <- refit_table %>%
+    modeltime_forecast(
+      h = forecast_period,
+      actual_data = dataset,
+      keep_data = TRUE
+    )
+  
+  return(forecast_tbl)
+}
+
