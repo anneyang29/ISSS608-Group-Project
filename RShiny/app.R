@@ -242,17 +242,42 @@ ClusterRow3 <- fluidRow(
 
 # STEP 4: Interpretation (Parallel & Demographics)
 ClusterRow4 <- fluidRow(
-  column(3,
-         card(title = "Interpretation Settings", status = "info", solidHeader = FALSE, width = NULL,
-             selectInput("demo_var", "Demographic Variable:", choices = demo_vars)
-         )
+  column(
+    3,
+    card(
+      title = "Interpretation Settings",
+      status = "info",
+      solidHeader = FALSE,
+      width = NULL,
+      selectizeInput(
+        "demo_var",
+        "Demographic Variable:",
+        choices = demo_vars,
+        selected = head(demo_vars, 1),
+        multiple = FALSE,
+        options = list(
+          dropdownParent = "body"
+        )
+      )
+    )
   ),
-  column(9,
-         card(title = "Behavioural Contrast", status = "primary", solidHeader = TRUE, width = NULL,
-             withSpinner(parallelPlotOutput("pPlot", height = "450px"))),
-         
-         card(title = "Demographic Composition", status = "primary", solidHeader = TRUE, width = NULL, align = "center",
-             withSpinner(plotOutput("demoPlot", height = "400px")))
+  column(
+    9,
+    card(
+      title = "Behavioural Contrast",
+      status = "primary",
+      solidHeader = TRUE,
+      width = NULL,
+      withSpinner(parallelPlotOutput("pPlot", height = "450px"))
+    ),
+    card(
+      title = "Demographic Composition",
+      status = "primary",
+      solidHeader = TRUE,
+      width = NULL,
+      align = "center",
+      withSpinner(plotOutput("demoPlot", height = "400px"))
+    )
   )
 )
 
