@@ -277,7 +277,6 @@ ConfirmRow1 <- fluidRow(
   column(9,
          card(title = "Regression Results", status = "primary", solidHeader = TRUE, width = NULL,
              uiOutput("h1_sentence"),
-             tableOutput("h1_summary"),
              hr(),
              withSpinner(plotOutput("h1_plot", height = "420px")),
              hr(),
@@ -285,7 +284,9 @@ ConfirmRow1 <- fluidRow(
              fluidRow(
                column(6, withSpinner(plotOutput("h1_diag_resid", height = "260px"))),
                column(6, withSpinner(plotOutput("h1_diag_qq", height = "260px")))
-             )
+             ),
+             hr(),
+             tableOutput("h1_summary")
          ),
          card(
            title = "Chart Interpretation",
@@ -345,10 +346,11 @@ ConfirmRow2 <- fluidRow(
   column(9,
          card(title = "ANOVA Results (or Kruskal-Wallis)", status = "primary", solidHeader = TRUE, width = NULL,
              uiOutput("h2_sentence"),
-             tableOutput("h2_summary"),
              hr(),
              withSpinner(plotOutput("h2_plot", height = "420px")),
-             uiOutput("h2_posthoc_ui")
+             uiOutput("h2_posthoc_ui"),
+             hr(),
+             tableOutput("h2_summary")
          ),
          card(
            title = "Chart Interpretation",
