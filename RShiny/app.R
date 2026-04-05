@@ -580,24 +580,27 @@ Dashboard <- page_fluid(
   layout_sidebar(
     fillable=FALSE,
     sidebar = time_dashboard_filters,
-    time_key_stats,
-    bubble_plot,
     layout_columns(
-      width=1,
-      col_widths = c(6,6),
-      cra_plot,
-      seasonal_analysis_card
-    ))
+      time_key_stats,
+      bubble_plot,
+      layout_columns(
+        width=1,
+        col_widths = c(6,6),
+        cra_plot,
+        seasonal_analysis_card
+      ),
+      col_widths=c(12,12,12)
+      ))
   )
 
 ca_filters <- sidebar(
   title = h4("Filters"),
   bg = "lightgrey",
 
-  # Global filters stay at the top
+  # Global filters 
   dateRangeInput("cashflow_date_range", "Transactions Date Range",
-                 min = "2023-01-01", max = "2023-3-31",
-                 start = "2023-01-01", end = "2023-06-30",
+                 min = "2023-01-01", max = "2023-12-31",
+                 start = "2023-01-01", end = "2023-3-31",
                  format = "yyyy-mm-dd",
                  startview="year"),
   selectInput("cashflow_locations", "Locations",
@@ -610,7 +613,7 @@ ca_filters <- sidebar(
                           "Pasto, Nariño", "Pereira, Risaralda",         
                           "Santa Marta, Magdalena", "Sincelejo, Sucre", 
                           "Valledupar, Cesar", "Villavicencio, Meta")),
-  # Accordion sections for specific chart settings
+  # Accordion sections for customer segment breakdown
   accordion(
     open = FALSE, # Set to TRUE if you want them open by default
     accordion_panel(
@@ -677,7 +680,7 @@ CashPredOptions <- sidebar(
                                    "Prophet"="model_fit_prophet",
                                    "Boosted Prophet"="model_fit_prophet_boost",
                                    "Linear Regression"="model_fit_linear",
-                                   "Multivariate Adaptive Regression Spline" ="model_fit_mars",
+                                   # "Multivariate Adaptive Regression Spline" ="model_fit_mars", #option removed because of RAM limits on free shiny hosting
                                    "Naive"="model_fit_naive"),
                          selected = c("model_fit_ets", "model_fit_arima_boosted", 
                                       "model_fit_prophet_boost", "model_fit_linear")),
@@ -1699,6 +1702,7 @@ server <- function(input, output, session) {
     arrow::open_dataset("data/shiny_time_data.parquet")
   }
   
+  
   dashboard_data <- eventReactive(input$generate_btn, {
     gc()
     # 1. Grab inputs
@@ -1724,6 +1728,7 @@ server <- function(input, output, session) {
       ))
       return(NULL) # This stops the rest of the plots from trying to render
     }
+    
     
     # 2. Open Dataset
     td <- load_time_data()
@@ -1858,7 +1863,7 @@ server <- function(input, output, session) {
   
   # --- 1.5 SEASONAL TREND ANALYSIS---
   seasonal_ts_ready <- reactive({
-    req(dashboard_data(), input$time_selected_seg)
+    req(dashboard_data())
     
     get_seasonal_data(
       dashboard_data(),
@@ -1901,7 +1906,7 @@ server <- function(input, output, session) {
     gc()
     
     # Startup defaults
-    date_rng <- if(is.null(input$cashflow_date_range)) c("2023-01-01", "2023-12-31") else input$cashflow_date_range
+    date_rng <- if(is.null(input$cashflow_date_range)) c("2023-01-01", "2023-3-31") else input$cashflow_date_range
     loc_val  <- if(is.null(input$cashflow_locations)) "All" else input$cashflow_locations
     # Calculate the difference in days
     
@@ -1938,8 +1943,6 @@ server <- function(input, output, session) {
   }, ignoreNULL = TRUE)
   
   liquidity_data <- reactive({
-    req(input$cashflow_date_range)
-    
     get_liquidity_data(
       data = ca_raw_data(), 
       location_value = isolate(input$cashflow_locations), 
@@ -1955,8 +1958,17 @@ server <- function(input, output, session) {
     
     linegraph<- get_cashflow_graph(plot_data)
     
-    ggplotly(linegraph, tooltip = "text") %>%
-      layout(legend = list(orientation = "h", x = 0.5, xanchor = "center", y = -0.2))
+    p_plotly<- ggplotly(linegraph, tooltip = "text") %>%
+      layout(legend = list(orientation = "h", x = 0.5, xanchor = "center", y = -0.2))%>%
+      style(hoverinfo = "skip", traces = c(1, 2))
+    
+    
+    # Clean up legend names
+    for (i in seq_along(p_plotly$x$data)) {
+      p_plotly$x$data[[i]]$name <- gsub("\\(|,1\\)", "", p_plotly$x$data[[i]]$name)
+    }
+    
+    p_plotly
   })
   
   # --- 2.3 CUSTOMER BREAKDOWN ---
@@ -2123,7 +2135,6 @@ server <- function(input, output, session) {
         modeltime_refit(data = forecast_data)
       incProgress(0.5)
     })
-    accordion_panel_set("forecast_accordion", "panel1")
   })
   
   # Render Future Prediction Plot
@@ -2179,29 +2190,15 @@ server <- function(input, output, session) {
       )
     }
     
-    if (state == "test") {
-      # Show the Calibration Plot and Accuracy Table stacked
-      return(
-        tagList(
-          plotlyOutput("calibration_plot", height = "550px"),
-          hr(),
-          h5("Accuracy Metrics", class = "mt-3"),
-          reactableOutput("accuracy_table")
-        )
-      )
-    }
+    plot_output <- if (state == "test") plotlyOutput("calibration_plot", height = "550px") else plotlyOutput("prediction_plot", height = "550px")
+    table_output <- if (state == "test") reactableOutput("accuracy_table") else reactableOutput("pred_accuracy_table")
     
-    if (state == "future") {
-      # Show only the Future Prediction Plot
-      return(
-        tagList(
-          plotlyOutput("prediction_plot", height = "550px"),
-          hr(),
-          h5("Accuracy Metrics", class = "mt-3"),
-          reactableOutput("pred_accuracy_table")
-        )
-      )
-    }
+    navset_card_tab(
+      full_screen = TRUE, # Adds a button to expand the chart
+      nav_panel("Forecast Plot", plot_output),
+      nav_panel("Metrics", table_output)
+    )
+    
   })
 }
 

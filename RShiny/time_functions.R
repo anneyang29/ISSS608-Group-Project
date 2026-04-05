@@ -363,51 +363,82 @@ get_stl <- function(data, metric, modelType, speriod, swindow=7, twindow=11) {
 
 get_liquidity_data <- function(data, location_value, start_date, end_date){
   
-  filtered_data <- filter_tx_dates(data, start_date, end_date) %>%
-    filter_customer("location", location_value)
-    result <- filtered_data %>%
-      pivot_wider(names_from = type, 
-                  values_from = tx_volume,
-                  values_fn = sum) %>%
-      replace_na(list(Withdrawal=0, Deposit=0)) %>%
-      mutate(week = yearweek(date),
-             date=as.Date(week))%>%
-      group_by(date) %>%
-      summarise(
-        Inflow=sum(Deposit),
-        Outflow=sum(Withdrawal)
-      ) %>%
-      mutate(Group = ifelse(Inflow > Outflow, "Inflow Higher", "Outflow Higher"),
-             net_liquidity = Inflow-Outflow)
+  result <- filter_tx_dates(data, start_date, end_date) %>%
+    filter_customer("location", location_value) %>%
+    pivot_wider(names_from = type, 
+                values_from = tx_volume,
+                values_fn = sum) %>%
+    replace_na(list(Withdrawal = 0, Deposit = 0)) %>%
+    mutate(date = as.Date(yearweek(date))) %>% # Group by week start
+    group_by(date) %>%
+    summarise(
+      Inflow = sum(Deposit),
+      Outflow = sum(Withdrawal),
+      .groups = "drop"
+    ) %>%
+    mutate(
+      net_liquidity = Inflow - Outflow,
+      Group = ifelse(Inflow >= Outflow, "Positive net cashflow", "Negative net cashflow")
+    )
   
   return(result)
 }
 
 #create cashflow linegraph
 get_cashflow_graph <- function(data){
-  ggplot(data, aes(x = date, 
-                   # Add group = 1 here so lines/ribbons can connect
-                   group = 1,
-                   text = paste0("Date: ", date, 
-                                 "<br>Inflow: $", scales::comma(Inflow), 
-                                 "<br>Outflow: $", scales::comma(Outflow),
-                                 "<br>Net: $", scales::comma(net_liquidity)))) +
-    # Ensure fill is mapped inside geom_ribbon
-    geom_ribbon(aes(ymin = pmin(Inflow, Outflow), 
-                    ymax = pmax(Inflow, Outflow), 
-                    fill = Group), alpha = 0.3) +
-    geom_line(aes(y = Inflow, color = "Inflow"), linewidth = 1) +
-    geom_line(aes(y = Outflow, color = "Outflow"), linewidth = 1) +
+  # 1. Create the high-resolution version for the RIBBONS ONLY
+  resampled_dates <- seq(min(data$date), max(data$date), by = "1 day")
+  
+  data_high_res <- data.frame(
+    date = resampled_dates,
+    Inflow = approx(data$date, data$Inflow, xout = resampled_dates)$y,
+    Outflow = approx(data$date, data$Outflow, xout = resampled_dates)$y
+  ) %>%
+    mutate(
+      Group = ifelse(Inflow >= Outflow, "Positive net cashflow", "Negative net cashflow")
+    )
+  
+  # 2. Build the Plot
+  # We leave the main ggplot() data empty and define it in each layer
+  ggplot() +
+    # --- RIBBON LAYER (High-res, no tooltips) ---
+    geom_ribbon(data = data_high_res,
+                aes(x = date, ymin = Outflow, ymax = pmax(Inflow, Outflow), fill = "Positive net cashflow"), 
+                alpha = 0.3) +
+    geom_ribbon(data = data_high_res,
+                aes(x = date, ymin = Inflow, ymax = pmax(Outflow, Inflow), fill = "Negative net cashflow"), 
+                alpha = 0.3) +
+    
+    # --- LINE LAYER (Original data, HAS tooltips) ---
+    geom_line(data = data, 
+              aes(x = date, y = Inflow, color = "Inflow", group = 1,
+                  text = paste0("Date: ", date, 
+                                "<br>Inflow: $", scales::comma(Inflow), 
+                                "<br>Outflow: $", scales::comma(Outflow),
+                                "<br>Net: $", scales::comma(net_liquidity))), 
+              linewidth = 1) +
+    geom_line(data = data, 
+              aes(x = date, y = Outflow, color = "Outflow", group = 1,
+                  text = paste0("Date: ", date, 
+                                "<br>Inflow: $", scales::comma(Inflow), 
+                                "<br>Outflow: $", scales::comma(Outflow),
+                                "<br>Net: $", scales::comma(net_liquidity))), 
+              linewidth = 1) +
+    
+    # Styling
     scale_color_manual(values = c("Inflow" = "steelblue", "Outflow" = "coral")) +
-    scale_fill_manual(values = c("Inflow Higher" = "steelblue", "Outflow Higher" = "coral")) +
+    scale_fill_manual(
+      values = c(
+        "Positive net cashflow" = "steelblue", 
+        "Negative net cashflow" = "coral"
+      ),
+      labels = c(
+        "Positive net cashflow" = "Positive Net Cashflow", 
+        "Negative net cashflow" = "Negative Net Cashflow"
+      )
+    )+
     theme_grey() +
-    labs(title = "Inflow vs. Outflow Over Time", 
-         fill = "Net liquidity", color = "Series", 
-         y="Amount ($)",
-         x="Date") +
-    theme(legend.position = "bottom", 
-          legend.direction = "horizontal",
-          legend.box = "horizontal")
+    labs(title = "Inflow vs Outflow", y = "Amount ($)", x = "Date")
 }
 
 
